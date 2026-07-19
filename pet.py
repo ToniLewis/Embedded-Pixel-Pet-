@@ -3,7 +3,7 @@ from enum import Enum, auto
 import time
 from typing import List, Dict
 
-from accessories import ACCESSORY_CATALOG  # <-- top-level import
+from accessories import ACCESSORY_CATALOG
 
 
 class Mood(Enum):
@@ -42,7 +42,7 @@ class Pet:
         "Rice Ball": 2,
         "Tea": 2,
     })
-    accessories: List[str] = field(default_factory=list)   # unlocked accessories
+    accessories: List[str] = field(default_factory=list)
     achievements: List[str] = field(default_factory=list)
     memories: List[MemoryEntry] = field(default_factory=list)
     mood: Mood = Mood.HAPPY
@@ -144,7 +144,6 @@ class Pet:
         self.update_mood()
 
     def update_mood(self):
-        # Mood mapping based on stats
         if self.health < 30 and self.hunger > 60:
             self.mood = Mood.SICK
         elif self.hunger > 60:
@@ -176,15 +175,9 @@ class Pet:
         self.memories.append(entry)
 
     def earn_coins(self, amount: int):
-        """Increase the pet's coins by a positive amount."""
         self.coins = max(0, self.coins + amount)
 
     def buy_accessory(self, name: str) -> bool:
-        """
-        Try to buy an accessory from the catalog.
-
-        Returns True if the purchase succeeded, False otherwise.
-        """
         acc = ACCESSORY_CATALOG.get(name)
         if acc is None:
             return False
@@ -198,9 +191,6 @@ class Pet:
         return True
 
     def equip_accessory(self, name: str):
-        """
-        Equip an accessory that has already been unlocked.
-        """
         if name in self.accessories:
             self.equipped_accessory = name
             self.add_memory(f"You equipped my {name.lower()}!", "🌸")
