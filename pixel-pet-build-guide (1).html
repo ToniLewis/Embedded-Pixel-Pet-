@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Pet — Embedded Companion Device Build Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF5FA;
+    --panel:#FFFFFF;
+    --ink:#4A2E4D;
+    --ink-soft:#8B6F92;
+    --green:#7FE0C4;
+    --green-dark:#3FBE9C;
+    --sky:#B39DDB;
+    --sky-bg:#F1EAFB;
+    --coral:#FF6F91;
+    --coral-bg:#FFE9EF;
+    --yellow:#F5C242;
+    --yellow-bg:#FFF8E1;
+    --teal:#FF8FB8;
+    --teal-bg:#FFE3EF;
+    --border:#F5DCEA;
+    --shadow: 0 6px 20px rgba(140, 60, 110, 0.10);
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Nunito', sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,.display{ font-family:'Baloo 2', sans-serif; }
+  .app{ max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+  .hero{ text-align:center; margin-bottom: 18px; }
+  .hero h1{ font-size: clamp(1.4rem, 4vw, 2.2rem); margin: 0 0 4px; color: var(--ink); }
+  .hero p{ margin:0; color:var(--ink-soft); font-weight:700; font-size:0.95rem; }
+  .tracker-wrap{ background: var(--panel); border-radius: 20px; padding: 18px 14px 10px; box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid var(--border); }
+  .tracker-label{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; padding: 0 4px; }
+  .tracker-label b{ font-family:'Baloo 2'; font-size:1rem; }
+  .tracker-label span{ font-size:0.85rem; color:var(--ink-soft); font-weight:700;}
+  .circuit-svg{ width:100%; height:auto; display:block; }
+  .layout{ display:grid; grid-template-columns: 230px 1fr; gap:18px; align-items:start; }
+  @media (max-width: 760px){ .layout{ grid-template-columns: 1fr; } }
+  .steplist{ background:var(--panel); border-radius:18px; padding:10px; box-shadow: var(--shadow); border:1px solid var(--border); position: sticky; top: 12px; max-height: 78vh; overflow-y:auto; }
+  @media (max-width: 760px){ .steplist{ position:static; max-height:none; display:flex; flex-wrap:wrap; gap:6px; } }
+  .step-btn{ display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:9px 10px; margin-bottom:4px; border:none; border-radius:12px; background:transparent; cursor:pointer; font-family:'Nunito'; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition: background .15s ease, color .15s ease; }
+  @media (max-width:760px){ .step-btn{ width:auto; margin-bottom:0; } }
+  .step-btn:hover{ background: var(--teal-bg); }
+  .step-btn.active{ background: var(--ink); color:#fff; }
+  .step-btn .dot{ flex:0 0 20px; height:20px; width:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; background: var(--border); color:var(--ink-soft); }
+  .step-btn.done .dot{ background: var(--green); color:#fff; }
+  .step-btn.active .dot{ background: var(--teal); color:#fff; }
+  .panel{ background: var(--panel); border-radius:20px; padding: 22px 24px 26px; box-shadow: var(--shadow); border:1px solid var(--border); min-height: 420px; }
+  .badge{ display:inline-block; background: var(--teal); color:#fff; font-family:'Baloo 2'; font-size:0.75rem; padding: 4px 12px; border-radius:999px; letter-spacing:0.03em; margin-bottom: 10px; }
+  .panel h2{ margin: 2px 0 12px; font-size:1.5rem; display:flex; align-items:center; gap:8px;}
+  .callout{ border-radius:14px; padding:14px 16px; margin: 14px 0; font-size:0.92rem; line-height:1.5;}
+  .callout b.tag{ display:block; font-family:'Baloo 2'; font-size:0.85rem; margin-bottom:4px; }
+  .why{ background:var(--sky-bg); color:#3B2A5E; }
+  .why b.tag{ color:var(--sky); }
+  .mistake{ background:var(--coral-bg); color:#7A1F38; }
+  .mistake b.tag{ color:var(--coral); }
+  .checklist-box{ background:var(--yellow-bg); border-radius:14px; padding:14px 16px; margin:14px 0;}
+  .checklist-box b.tag{ font-family:'Baloo 2'; font-size:0.85rem; color:var(--yellow); display:block; margin-bottom:6px;}
+  .steps-list{ margin:10px 0; padding-left:0; list-style:none; }
+  .steps-list li{ display:flex; gap:10px; padding:7px 0; font-size:0.94rem; line-height:1.45; border-bottom: 1px dashed var(--border); }
+  .steps-list li:last-child{ border-bottom:none; }
+  .steps-list .num{ flex:0 0 22px; height:22px; border-radius:50%; background:var(--ink); color:#fff; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .diagram-wrap{ text-align:center; margin: 16px 0; }
+  .diagram-wrap svg{ max-width: 100%; height:auto; }
+  .nav-row{ display:flex; justify-content:space-between; align-items:center; margin-top:22px; gap:10px; flex-wrap:wrap; }
+  .navbtn{ font-family:'Baloo 2'; font-weight:700; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; font-size:0.9rem; transition: transform .1s ease; }
+  .navbtn:active{ transform: scale(0.96); }
+  .navbtn.prev{ background: var(--border); color: var(--ink-soft); }
+  .navbtn.next{ background: var(--ink); color:#fff; }
+  .navbtn:disabled{ opacity:0.35; cursor:default; }
+  .done-toggle{ display:flex; align-items:center; gap:8px; font-family:'Baloo 2'; font-size:0.85rem; color:var(--ink-soft); }
+  .done-toggle input{ width:18px; height:18px; accent-color: var(--green-dark); }
+  .check-row{ display:flex; align-items:flex-start; gap:8px; padding:5px 0; font-size:0.9rem; }
+  .check-row input{ margin-top:3px; width:16px; height:16px; accent-color: var(--green-dark); flex:0 0 16px; }
+  .footer-note{ text-align:center; color:var(--ink-soft); font-size:0.8rem; margin-top: 22px; }
+  code{ background: var(--sky-bg); color:#3B2A5E; padding: 1px 6px; border-radius:6px; font-size:0.88em; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hero">
+    <h1>🌸 Build Pixel Pet — Your Embedded Companion Device</h1>
+    <p>A simulated embedded systems project in Python, one tiny step at a time 💕</p>
+  </div>
+
+  <div class="tracker-wrap">
+    <div class="tracker-label">
+      <b>🌼 Mochi's Progress</b>
+      <span id="progressText">0 / 14 steps lit</span>
+    </div>
+    <svg id="circuitTracker" class="circuit-svg" viewBox="0 0 940 70" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="layout">
+    <nav class="steplist" id="steplist"></nav>
+    <main class="panel" id="panel"></main>
+  </div>
+
+  <p class="footer-note">Nothing here saves between visits — it resets if you reload. That's okay! Go at your own pace 💛</p>
+</div>
+
+<script>
+// ---------- SVG HELPERS ----------
+function wire(x1,y1,x2,y2,arrow){
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--ink-soft)" stroke-width="3" stroke-linecap="round" ${arrow?'marker-end="url(#arrow)"':''}/>`;
+}
+function box(x,y,w,h,text,fillC,strokeC,fontSize){
+  fontSize = fontSize||14;
+  const lines = String(text).split('\n');
+  const startY = y+h/2 - ((lines.length-1)*fontSize*0.6);
+  const texts = lines.map((line,i)=>`<text x="${x+w/2}" y="${startY+i*fontSize*1.25}" text-anchor="middle" font-size="${fontSize}" font-weight="800" font-family="Baloo 2" fill="var(--ink)">${line}</text>`).join('');
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${fillC}" stroke="${strokeC}" stroke-width="3"/>${texts}`;
+}
+function iconCircle(x,y,r,label,colorVar,emoji){
+  let s = `<circle cx="${x}" cy="${y}" r="${r}" fill="${colorVar}bg" stroke="${colorVar}" stroke-width="3"/>`;
+  if(emoji) s += `<text x="${x}" y="${y+7}" text-anchor="middle" font-size="20">${emoji}</text>`;
+  s += `<text x="${x}" y="${y+r+20}" text-anchor="middle" font-size="12" font-weight="800" font-family="Baloo 2" fill="var(--ink-soft)">${label}</text>`;
+  return s;
+}
+function sensorIcon(x,y,label,emoji){
+  return `<circle cx="${x}" cy="${y}" r="24" fill="var(--sky-bg)" stroke="var(--sky)" stroke-width="3"/><text x="${x}" y="${y+8}" text-anchor="middle" font-size="22">${emoji}</text><text x="${x}" y="${y+42}" text-anchor="middle" font-size="12" font-weight="800" font-family="Baloo 2" fill="var(--ink-soft)">${label}</text>`;
+}
+function lightIcon(x,y,label,colorVar){
+  return `<circle cx="${x}" cy="${y}" r="16" fill="${colorVar}" opacity="0.3"/><circle cx="${x}" cy="${y}" r="9" fill="${colorVar}"/><text x="${x}" y="${y+34}" text-anchor="middle" font-size="12" font-weight="800" font-family="Baloo 2" fill="var(--ink-soft)">${label}</text>`;
+}
+function caption(x,y,text,size,color){
+  return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size||12}" font-weight="700" fill="${color||'var(--ink-soft)'}">${text}</text>`;
+}
+function svgWrap(vbW,vbH,content){
+  return `<svg viewBox="0 0 ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--green-dark)"/></marker></defs>
+    ${content}
+  </svg>`;
+}
+
+// ---------- DIAGRAMS ----------
+function diagSetup(){
+  let s='';
+  s += box(20,30,150,120,'Python 3 +\npygame\ninstalled','var(--sky-bg)','var(--sky)',15);
+  s += box(200,30,150,120,'Project folder\nmain / gpio /\nscheduler / etc.','var(--teal-bg)','var(--teal)',14);
+  s += box(380,30,150,120,'PetOS\nboot sequence\nprints & runs','#FCFCFF','var(--ink-soft)',14);
+  return svgWrap(550,180,s);
+}
+function diagGPIO(){
+  let s='';
+  const items=[['🍓','Feed'],['🎮','Play'],['🌙','Sleep'],['📋','Menu']];
+  const xs=[60,160,260,360];
+  items.forEach((it,i)=>{ s+=sensorIcon(xs[i],55,it[1],it[0]); s+=wire(xs[i],112,xs[i],140,true); });
+  s += box(20,140,420,60,'gpio.py\nread_pins() + debounce','var(--teal-bg)','var(--teal)',14);
+  return svgWrap(460,220,s);
+}
+function diagScheduler(){
+  let s='';
+  s += box(20,20,190,55,'Task: mood update\n(every 1s)','var(--teal-bg)','var(--teal)',13);
+  s += box(20,100,190,55,'Task: stat decay\n(every 10s)','var(--sky-bg)','var(--sky)',13);
+  s += wire(210,47,290,75,true);
+  s += wire(210,127,290,95,true);
+  s += box(290,55,190,65,'Scheduler\nrun_due_tasks()','#FCFCFF','var(--ink-soft)',14);
+  s += wire(480,87,540,87,true);
+  s += box(540,55,120,65,'main loop\n(1x/frame)','var(--yellow-bg)','var(--yellow)',13);
+  return svgWrap(680,175,s);
+}
+function diagFSM(){
+  let s='';
+  const states=[['😊','Happy',90,70],['🍓','Hungry',230,70],['🌙','Sleepy',370,70],['🤒','Sick',510,70]];
+  states.forEach(st=>{ s+=iconCircle(st[2],st[3],32,st[1],'var(--teal)',st[0]); });
+  s += wire(122,70,198,70,true);
+  s += wire(262,70,338,70,true);
+  s += wire(402,70,478,70,true);
+  s += caption(300,168,'evaluate_mood(stats) checks in priority order:',12,'var(--ink-soft)');
+  s += caption(300,188,'SICK overrides all → then HUNGRY / SLEEPY → default HAPPY',12,'var(--ink-soft)');
+  return svgWrap(600,215,s);
+}
+function diagDisplay(){
+  let s='';
+  s += box(20,55,160,60,'Game state\n(mood, stats)','var(--sky-bg)','var(--sky)',14);
+  s += wire(180,85,250,85,true);
+  s += box(250,55,170,60,'Off-screen\ndisplay buffer','var(--teal-bg)','var(--teal)',14);
+  s += wire(420,85,490,85,true);
+  s += box(490,55,150,60,'Screen\n(blit once)','#FCFCFF','var(--ink-soft)',14);
+  return svgWrap(660,175,s);
+}
+function diagFeeding(){
+  let s='';
+  s += sensorIcon(50,60,'Feed button','🍓');
+  s += wire(80,60,150,60,true);
+  s += box(150,35,170,55,'pet.feed(snack)','var(--teal-bg)','var(--teal)',14);
+  s += wire(320,62,390,62,true);
+  s += box(390,35,180,55,'MoodMachine\n.update()','var(--sky-bg)','var(--sky)',13);
+  return svgWrap(600,140,s);
+}
+function diagPower(){
+  let s='';
+  s += box(90,20,300,55,'No input for\nN seconds','var(--yellow-bg)','var(--yellow)',15);
+  s += wire(240,75,240,105,true);
+  s += lightIcon(240,125,'Idle detected','var(--coral)');
+  s += wire(240,177,240,207,true);
+  s += box(60,207,360,60,'Fade display + slow\nscheduler → 🌙 sleep screen','var(--teal-bg)','var(--teal)',13);
+  s += wire(240,267,240,297,true);
+  s += box(40,297,400,55,'Any button press → wake instantly,\nrestore full speed','var(--sky-bg)','var(--sky)',13);
+  return svgWrap(480,375,s);
+}
+function diagEEPROM(){
+  let s='';
+  s += box(20,40,180,60,'Pet + mood +\ninventory','var(--teal-bg)','var(--teal)',14);
+  s += wire(200,70,270,70,true);
+  s += box(270,40,180,60,'save_state()','var(--sky-bg)','var(--sky)',15);
+  s += wire(450,70,520,70,true);
+  s += box(520,40,150,60,'save_data.json','#FCFCFF','var(--ink-soft)',14);
+  s += wire(595,100,595,140,false);
+  s += wire(595,140,360,140,false);
+  s += wire(360,140,360,100,true);
+  s += caption(477,160,'load_state() restores everything on the next boot',11,'var(--ink-soft)');
+  return svgWrap(700,190,s);
+}
+function diagWatchdog(){
+  let s='';
+  s += box(20,20,190,55,'Main loop\nwatchdog.kick()','var(--teal-bg)','var(--teal)',13);
+  s += wire(210,47,280,47,true);
+  s += box(280,20,200,55,'Watchdog checks\ntime since last kick','var(--sky-bg)','var(--sky)',13);
+  s += wire(380,75,380,112,true);
+  s += lightIcon(380,135,'⚠️ Reset triggered','var(--coral)');
+  s += wire(380,190,380,215,true);
+  s += box(260,215,240,55,'Emergency save +\nclean recovery','var(--yellow-bg)','var(--yellow)',13);
+  return svgWrap(560,290,s);
+}
+function diagEvents(){
+  let s='';
+  s += sensorIcon(70,55,'Dialogue','💌');
+  s += sensorIcon(195,55,'Weather','🌦');
+  s += sensorIcon(320,55,'Season','🍂');
+  s += wire(70,115,70,150,true);
+  s += wire(195,115,195,150,true);
+  s += wire(320,115,320,150,true);
+  s += box(30,150,330,55,'Scheduled event tasks\n(decorative, read-only)','var(--teal-bg)','var(--teal)',13);
+  return svgWrap(400,230,s);
+}
+function diagAccessories(){
+  let s='';
+  s += box(20,20,170,55,'coins stat','var(--sky-bg)','var(--sky)',15);
+  s += wire(190,47,260,47,true);
+  s += box(260,20,190,55,'buy_accessory()','var(--teal-bg)','var(--teal)',14);
+  s += wire(450,47,510,47,true);
+  s += lightIcon(535,47,'Equipped overlay','var(--green)');
+  s += box(20,110,260,55,'Achievement trigger\nconditions checked','var(--yellow-bg)','var(--yellow)',13);
+  s += wire(280,137,340,137,true);
+  s += lightIcon(365,137,'🏅 Unlocked','var(--green)');
+  return svgWrap(630,205,s);
+}
+function diagMemoryBook(){
+  let s='';
+  s += box(20,50,220,60,'Meaningful moments\n(feed, milestones, buys)','var(--teal-bg)','var(--teal)',13);
+  s += wire(240,80,310,80,true);
+  s += box(310,50,170,60,'log_memory()','var(--sky-bg)','var(--sky)',15);
+  s += wire(480,80,550,80,true);
+  s += box(550,50,170,60,'memories.json','#FCFCFF','var(--ink-soft)',14);
+  s += wire(635,110,635,150,true);
+  s += box(500,150,220,50,'Memory Book screen\n(via Menu button)','var(--yellow-bg)','var(--yellow)',13);
+  return svgWrap(760,230,s);
+}
+function diagTest(){
+  let s='';
+  s += box(15,10,430,190,'','var(--yellow-bg)','var(--yellow)');
+  const items=['Fresh boot + clean first run', 'Decay, mood shift, sleep all fire alone', 'Rapid presses stay debounced', 'Force-close/reopen restores state'];
+  items.forEach((t,i)=>{
+    const y=45+i*40;
+    s += `<rect x="35" y="${y-15}" width="22" height="22" rx="5" fill="#fff" stroke="var(--green-dark)" stroke-width="3"/><path d="M 39 ${y-4} l6 6 l12 -14" stroke="var(--green-dark)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<text x="70" y="${y+2}" font-size="14" font-weight="700" fill="var(--ink)">${t}</text>`;
+  });
+  return svgWrap(460,215,s);
+}
+function diagPolish(){
+  let s='';
+  s += box(20,20,150,110,'Pixel Pet\nfinished! 🌸','var(--sky-bg)','var(--sky)',16);
+  const rows=[['🎨','Sprite + color pass'],['📸','Screenshots + demo clip'],['📝','README + GitHub push']];
+  rows.forEach((r,i)=>{
+    const y=45+i*32;
+    s += `<text x="200" y="${y+8}" font-size="20">${r[0]}</text>`;
+    s += `<text x="235" y="${y+5}" font-size="15" font-weight="700" fill="var(--ink)">${r[1]}</text>`;
+  });
+  return svgWrap(430,150,s);
+}
+
+// ---------- STEPS ----------
+const STEPS = [
+  {
+    icon:"🌼", title:"Project Setup & PetOS Boot Sequence",
+    why:"Skipping setup means fighting import errors right when you're trying to write the fun part. A clean file structure up front is also what lets you plug the later systems (scheduler, FSM, storage) together without a rewrite.",
+    instructions:[
+      "Create your project folder: <code>pixel-pet/</code>, with subfolders <code>assets/sprites/</code> and <code>screenshots/</code>.",
+      "Inside it, create empty files: <code>main.py</code>, <code>gpio.py</code>, <code>scheduler.py</code>, <code>state_machine.py</code>, <code>display.py</code>, <code>pet.py</code>, <code>power.py</code>, <code>storage.py</code>, <code>watchdog.py</code>, <code>events.py</code>.",
+      "Set up a virtual environment, then <code>pip install pygame</code> and add it to <code>requirements.txt</code>.",
+      "In <code>main.py</code>, write a printed PetOS boot sequence: <code>🌼 PetOS v1.0</code>, then lines like 'Initializing GPIO...' each followed by a checkmark, with a short <code>time.sleep(0.3)</code> between lines for effect.",
+      "Run <code>main.py</code> and confirm the full boot sequence prints top to bottom without errors, even though nothing else is built yet."
+    ],
+    diagram: diagSetup(),
+    checklist:["Project folder + subfolders created", "All module files created (empty is fine)", "pygame installed and in requirements.txt", "Boot sequence written in main.py", "Boot sequence runs cleanly start to finish"],
+    mistakes:["Writing all logic straight into main.py from the start instead of splitting into modules — this makes wiring later steps together much more painful than it needs to be.","Skipping the small time.sleep delays — without them the boot sequence reads as one instant text dump instead of a device actually starting up."]
+  },
+  {
+    icon:"🕹️", title:"Simulated GPIO & Button Input",
+    why:"In real embedded systems, buttons are read via GPIO pins polled by firmware, not handled directly by whatever UI framework is on top. Building a small abstraction layer here, even mapped to keyboard keys, teaches you to separate 'what hardware exists' from 'what the firmware does with it' — a distinction every embedded interview will probe.",
+    instructions:[
+      "In <code>gpio.py</code>, define pin mappings — e.g. <code>PIN_FEED</code>, <code>PIN_PLAY</code>, <code>PIN_SLEEP</code>, <code>PIN_MENU</code> — each mapped to a keyboard key constant like <code>pygame.K_1</code>.",
+      "Write a <code>read_pins(pygame_events)</code> function that scans the event queue and returns which 'pins' are currently HIGH, as an abstraction, not raw pygame key names.",
+      "In main.py's loop skeleton, call <code>read_pins()</code> each frame and print which pin went high, just to confirm input is being detected.",
+      "Add basic debounce logic: ignore a pin re-triggering within roughly 150ms of its last press, mirroring how real button debounce works in firmware.",
+      "Test by pressing each of the 4 buttons multiple times quickly and confirming debounce keeps a single tap from firing multiple times."
+    ],
+    diagram: diagGPIO(),
+    checklist:["Pin mapping defined for Feed/Play/Sleep/Menu", "read_pins() returns pin states", "Main loop prints detected presses", "Debounce logic implemented", "Debounce tested with rapid key presses"],
+    mistakes:["Reading pygame keys directly all over the codebase instead of going through gpio.py — this defeats the abstraction and makes later features much harder to wire in.","Skipping debounce — without it a single tap registers as many presses, and every stat interaction later will feel broken."]
+  },
+  {
+    icon:"⏱️", title:"Cooperative Scheduler (Timer-Driven Tasks)",
+    why:"Real embedded firmware rarely has one big loop doing everything at once — it runs a scheduler that calls different tasks at different intervals. Building this pattern is one of the most recognizable 'this person actually understands embedded systems' signals in a portfolio.",
+    instructions:[
+      "In <code>scheduler.py</code>, write a Task representation holding a function reference, an interval in seconds, and a last_run timestamp.",
+      "Write a <code>Scheduler</code> class with <code>add_task(func, interval)</code> and a <code>run_due_tasks(current_time)</code> method that calls any task whose interval has elapsed.",
+      "In main.py's loop, create one Scheduler instance and register a couple of dummy tasks (e.g. print 'tick' every 1s, print 'slow tick' every 5s).",
+      "Call <code>scheduler.run_due_tasks(time.time())</code> once per frame inside your main loop.",
+      "Run it for at least 15 seconds and confirm the fast and slow tasks fire at their own correct, independent intervals."
+    ],
+    diagram: diagScheduler(),
+    checklist:["Task representation created", "Scheduler class with add_task/run_due_tasks", "Scheduler wired into main loop", "Two dummy tasks with different intervals registered", "15+ second run confirms independent, accurate timing"],
+    mistakes:["Using time.sleep() inside individual tasks — this freezes the whole main loop and breaks input handling.","Hardcoding intervals directly inside main.py instead of passing them into add_task() — you'll want to tune these later without hunting through loop code."]
+  },
+  {
+    icon:"🐱", title:"Finite State Machine — Mood Engine",
+    why:"This is the technical core of the whole project. Converting a handful of numeric stats into a small set of discrete emotional states, with defined transition rules, is a textbook finite state machine — the same pattern used to control vending machines, traffic lights, and real embedded UI flows.",
+    instructions:[
+      "In <code>state_machine.py</code>, define the mood constants: HAPPY, SLEEPY, LONELY, HUNGRY, SICK, EXCITED, GRUMPY, LOVED.",
+      "Write <code>evaluate_mood(stats)</code> that takes hunger/energy/battery/attention and returns exactly one mood, using clear if/elif priority rules (e.g. SICK should override everything else).",
+      "Write a <code>MoodMachine</code> class storing <code>current_mood</code>, with an <code>update(stats)</code> method that only changes it when the result actually differs — this is your transition logic.",
+      "Add a transition log: whenever mood changes, print 'Mood changed: X -> Y' so you can watch transitions happen live.",
+      "Test by manually setting fake stat values in a scratch script (e.g. hunger=0, then hunger=100) and confirming the machine transitions through the states you'd expect."
+    ],
+    diagram: diagFSM(),
+    checklist:["All 8 mood constants defined", "evaluate_mood() implemented with clear priority rules", "MoodMachine tracks and updates only on real change", "Transition log prints changes", "Manually tested across a range of fake stat values"],
+    mistakes:["Writing a tangle of if statements with no clear priority order — decide up front which conditions override others or you'll get flickering, contradictory moods.","Recalculating and re-applying mood every single frame even when nothing changed — only act on real transitions, exactly like a real FSM does."]
+  },
+  {
+    icon:"🖼️", title:"Display Buffer & Pixel Art Rendering",
+    why:"Embedded devices don't draw straight to the physical screen constantly — firmware writes to a display buffer, then flushes it on a refresh cycle. Building a real, if tiny, version of this pattern is what turns Mochi from console text into an actual device.",
+    instructions:[
+      "In <code>display.py</code>, set up a Pygame window sized like a small handheld screen (e.g. 240x280) with a pastel background.",
+      "Create or source small pixel-art sprites for Mochi in a few poses (idle, happy, sleepy, eating) as tiny Pygame surfaces — 32x32 or 64x64px, true to a handheld device.",
+      "Write a <code>render(current_mood, stats)</code> function that clears an off-screen buffer, draws the correct sprite plus battery/hunger/energy bars, then blits the whole buffer to the real screen in one call.",
+      "Add small pixel-style text for status labels and simple rectangle progress bars for battery/hunger/energy.",
+      "Wire render() into the main loop, called once per frame after the scheduler runs, and confirm Mochi's sprite visibly changes when you manually change current_mood in a test."
+    ],
+    diagram: diagDisplay(),
+    checklist:["Pygame window created at handheld-appropriate size", "Sprites for at least 4 poses loaded", "render() draws to an off-screen buffer before blitting", "Stat bars rendered", "Sprite confirmed changing correctly with mood"],
+    mistakes:["Drawing directly to the visible screen from multiple places instead of through one render() function — this causes flicker and makes on-screen state hard to control.","Using full-size, non-pixelated art — keep sprites small and blocky on purpose or it stops reading as a device screen."]
+  },
+  {
+    icon:"🍓", title:"Feeding System & Stat Management",
+    why:"This is where GPIO input, the scheduler, and the FSM all start talking to each other for the first time — feeding is a small, self-contained feature that proves your architecture works end to end before you add anything more complex.",
+    instructions:[
+      "In <code>pet.py</code>, create a Pet class holding hunger, energy, battery, and attention (0-100 each), plus an inventory of snacks with stat effects (e.g. Strawberry: +15 hunger, +5 energy).",
+      "Write a <code>feed(snack_name)</code> method that applies the snack's effects and clamps every stat between 0 and 100.",
+      "Wire the Feed button (from gpio.py) so pressing it feeds the currently selected snack and immediately calls MoodMachine's update().",
+      "Register a scheduled task that slowly decays hunger/energy/attention over time even when the pet isn't touched, e.g. -1 hunger every 10 seconds.",
+      "Test by letting hunger decay for a minute untouched, then feeding it, and confirming both the number and the mood visibly respond."
+    ],
+    diagram: diagFeeding(),
+    checklist:["Pet class with clamped stats implemented", "At least 3 snacks with distinct effects defined", "Feed button wired to feed() and mood update", "Decay task registered on the scheduler", "Decay-then-feed behavior confirmed visually"],
+    mistakes:["Letting stats go below 0 or above 100 — always clamp after every change or bars will render broken or negative.","Forgetting to call the mood machine's update() after feeding — the stat changes but the sprite and mood text will lag behind, which reads as a bug in a demo."]
+  },
+  {
+    icon:"🔋", title:"Power Management & Sleep Mode",
+    why:"Battery-aware behavior, dimming the display and slowing the scheduler when idle, is a genuinely important embedded concept, and it also happens to be one of the cutest features in the spec. This is where 'engineering' and 'adorable' visibly become the same thing.",
+    instructions:[
+      "In <code>power.py</code>, track a <code>last_interaction_time</code> updated every time any button is pressed.",
+      "Write <code>is_idle(current_time, threshold_seconds)</code> that returns True once enough time has passed since the last interaction.",
+      "When idle is detected, slow the scheduler's tick rate (mood/decay tasks run less often) and gradually fade the display buffer over a few seconds into a small '🌙 Zzz...' sleep screen.",
+      "Any button press should immediately cancel sleep mode: reset last_interaction_time, restore full scheduler speed, and fade the screen back in.",
+      "Test by leaving the device untouched past the idle threshold, confirming a smooth fade to sleep, then pressing any button and confirming it wakes instantly."
+    ],
+    diagram: diagPower(),
+    checklist:["last_interaction_time tracked on any input", "is_idle() implemented with a chosen threshold", "Scheduler slows and display fades on idle", "Any button press wakes the device instantly", "Both sleep and wake tested and confirmed smooth"],
+    mistakes:["Setting the idle threshold so short the pet keeps falling asleep mid-interaction during a demo — 30-60 seconds is a safer default than something like 5 seconds.","Implementing sleep as an instant screen swap instead of a gradual fade — the fade is what actually sells the power-management concept visually."]
+  },
+  {
+    icon:"💾", title:"Persistent Storage (Simulated EEPROM)",
+    why:"Real microcontrollers keep small amounts of data in EEPROM or flash that survives a power-off. Simulating that with a save file, instead of an in-memory variable, proves you understand persistent state as its own concept, separate from 'the program happens to be running.'",
+    instructions:[
+      "In <code>storage.py</code>, write <code>save_state(pet, mood, inventory, day_count)</code> that serializes everything into a dictionary and writes it to <code>save_data.json</code>.",
+      "Write a matching <code>load_state()</code> that reads the file if it exists, or returns sensible defaults on a first run with no save file yet.",
+      "In main.py, call load_state() once at startup, right after the PetOS boot sequence, and use it to initialize your Pet/MoodMachine instead of always starting fresh.",
+      "Register a scheduled autosave task (every 30 seconds is reasonable) that calls save_state() automatically, plus call it once more on clean shutdown.",
+      "Test by running the pet, feeding it a few times, closing the program completely, and reopening it to confirm state picked up where you left off."
+    ],
+    diagram: diagEEPROM(),
+    checklist:["save_state() writes a complete, valid save_data.json", "load_state() handles both existing-save and no-save cases", "Startup loads saved state after the boot sequence", "Autosave task registered on the scheduler", "Full close-and-reopen test confirms state persists"],
+    mistakes:["Only saving on manual shutdown and never autosaving — a crash or force-close loses everything since the last manual save.","Not handling the 'no save file exists yet' case — this will crash on literally the very first run for anyone else who downloads your project."]
+  },
+  {
+    icon:"🐾", title:"Watchdog Timer & Fault Recovery",
+    why:"A watchdog timer is a classic embedded safety mechanism: a background timer that resets the system if the main loop stops responding within an expected window. Adding one, even in simulation, is a specific detail experienced embedded engineers will immediately recognize.",
+    instructions:[
+      "In <code>watchdog.py</code>, write a Watchdog class that tracks <code>last_kick_time</code> and a timeout window (e.g. 3 seconds).",
+      "In the main loop, call <code>watchdog.kick()</code> once per frame, right after render/update logic completes successfully, to prove the loop is alive.",
+      "Write <code>check(current_time)</code> that returns True if too much time has passed since the last kick, meaning the loop appears to have hung.",
+      "If check() ever returns True, log '⚠️ Watchdog reset triggered', call storage.py's save_state() as an emergency save, and restart the pet's core state cleanly rather than crashing silently.",
+      "Test deliberately: temporarily add a fake time.sleep(5) somewhere in the loop to simulate a hang, confirm the watchdog detects and logs it, then remove the fake delay."
+    ],
+    diagram: diagWatchdog(),
+    checklist:["Watchdog class tracks kicks and timeout", "kick() called every frame in the main loop", "check() correctly detects an overdue kick", "Failure triggers emergency save + clean recovery, not a crash", "Deliberately-induced hang confirmed detected"],
+    mistakes:["Adding the watchdog but never actually testing that it fires — an untested safety mechanism is just a comment in your README until you prove it works.","Forgetting to remove the deliberate test delay before finishing, leaving a mysterious freeze in the shipped code."]
+  },
+  {
+    icon:"💌", title:"Random Events — Dialogue, Weather & Seasons",
+    why:"These systems make Mochi feel alive session to session rather than mechanically identical every time, and they're a great showcase of clean event-driven design layered cleanly on top of the scheduler and FSM you already built.",
+    instructions:[
+      "In <code>events.py</code>, write a list of short dialogue lines and a <code>pick_random_dialogue()</code> function, plus a scheduled task that shows a new line every couple of minutes.",
+      "Add a weather system: a small set of states (Sunny, Rain, Snow, Cherry Blossoms) chosen randomly on a slower scheduled task, each swapping a small background overlay sprite in display.py.",
+      "Add a season system driven by the day_count you're already tracking in storage.py (e.g. every 25 in-game days advances the season), affecting only decorative sprite details.",
+      "Add a daily gift check: the first update after day_count increases triggers a small '🎁 Mochi found you a tiny flower!' event and adds it to the inventory.",
+      "Test by manually fast-forwarding day_count in a scratch script to confirm season changes and daily gifts trigger correctly without breaking anything else."
+    ],
+    diagram: diagEvents(),
+    checklist:["Random dialogue system implemented and scheduled", "Weather system with 3+ states and visual swap", "Season system tied to day_count", "Daily gift event implemented and adds to inventory", "Fast-forward test confirms season/gift triggers"],
+    mistakes:["Letting dialogue, weather, or season logic silently modify core Pet/MoodMachine state directly — keep these read-only and decorative or you'll create confusing side effects.","Hardcoding day advancement to real wall-clock time during testing — use a fast-forwardable counter so you can test season transitions without waiting 25 real days."]
+  },
+  {
+    icon:"🎀", title:"Accessories & Achievements",
+    why:"This is an intentionally low-stakes, high-reward feature layer — unlockable cosmetics and a short achievement list — and a great place to prove you can add scope to an already-working system without destabilizing anything underneath it.",
+    instructions:[
+      "In a new <code>accessories.py</code>, define a small catalog (Bow, Sun Hat, Glasses, Flower Crown, Scarf) each with a coin cost.",
+      "Add a coins stat to your Pet class, earned slowly over time or from achievements, and a <code>buy_accessory(name)</code> method that deducts coins and adds the item to an unlocked list.",
+      "Update display.py's render() to draw the currently equipped accessory as a small overlay sprite, layered so it never obscures the mood expression.",
+      "Define a short achievement list (First Meal, 100 Days Together, Master Sleeper, Healthy Friend, Explorer) with trigger conditions checked by a scheduled task, and show a small popup when one unlocks.",
+      "Test by manually granting yourself coins in a scratch script, buying an accessory, equipping it, and confirming it renders correctly without shifting or hiding Mochi's sprite."
+    ],
+    diagram: diagAccessories(),
+    checklist:["Accessory catalog with costs defined", "Coins stat and buy_accessory() implemented", "Equipped accessory renders correctly as an overlay", "Achievement list with trigger conditions implemented", "Purchase and render tested end to end"],
+    mistakes:["Letting accessories affect gameplay stats even slightly — the spec is explicit these should be purely cosmetic, and keeping it that way protects the clarity of your FSM.","Layering accessory sprites in the wrong draw order so they cover Mochi's face or mood indicator instead of sitting naturally around it."]
+  },
+  {
+    icon:"📖", title:"Memory Book (Event Logging System)",
+    why:"Underneath the charm, this is just a structured event log — exactly the kind of audit trail real embedded and backend systems keep — and it's a satisfying feature to build last since it can pull from every system you've already written.",
+    instructions:[
+      "In <code>memory_book.py</code>, write <code>log_memory(day_count, text)</code> that appends a small dict (day, text, timestamp) to a <code>memories.json</code> file, similar in spirit to your storage.py save pattern.",
+      "Hook log_memory() into a few meaningful moments you've already built: first feeding, day_count milestones (7, 25, 100), and accessory purchases.",
+      "Write <code>get_memories()</code> that reads memories.json back and returns entries sorted by day, ready to display.",
+      "Add a simple 'Memory Book' screen accessible from the Menu button that lists recent memories in your pixel-art style, a few at a time.",
+      "Test by playing through enough interactions to generate 4-5 different memory entries, then opening the Memory Book screen and confirming they display correctly in order."
+    ],
+    diagram: diagMemoryBook(),
+    checklist:["log_memory() writes structured entries to memories.json", "Hooked into at least 3 distinct meaningful moments", "get_memories() reads and sorts entries correctly", "Memory Book screen accessible from the Menu button", "4-5 real entries confirmed displaying correctly"],
+    mistakes:["Writing memory text directly wherever an event happens instead of always going through log_memory() — you'll end up with inconsistent formatting across entries.","Letting memories.json grow completely unbounded with no limit on the Memory Book screen, which will look broken once you have hundreds of entries."]
+  },
+  {
+    icon:"🧪", title:"Full Test Pass",
+    why:"With this many interacting systems, the scheduler, FSM, power management, watchdog, and persistence, a subtle bug in any one of them is easy to miss while you're the one who built it. A structured pass now catches what a casual runthrough won't.",
+    instructions:[
+      "Run the full app fresh (rename or delete save_data.json first) and confirm the PetOS boot sequence, then a clean first-run state, appear correctly.",
+      "Let it run untouched for 3+ minutes, confirming natural stat decay, at least one mood transition, and correctly-timed sleep mode all occur without input.",
+      "Deliberately press all four buttons in quick succession to confirm debounce and feeding logic hold up under rapid input.",
+      "Force-close the app mid-session and reopen it, confirming autosave picked up state close to where you left off, not just from the last manual save.",
+      "Re-trigger your Step 9 watchdog test one more time to confirm the safety mechanism still works after all the later features were layered on top."
+    ],
+    diagram: diagTest(),
+    checklist:["Fresh-start boot and first-run state confirmed clean", "3+ minute untouched run showed decay, mood shift, sleep", "Rapid button-press test confirmed debounce holds", "Force-close/reopen test confirmed autosave recovery", "Watchdog re-tested and confirmed still functioning"],
+    mistakes:["Only testing calm, single-press interactions and skipping the rapid-press and force-close tests — that's exactly where real embedded systems tend to reveal bugs.","Testing only right after a fresh start and never after the app has been running a while — some scheduler or memory issues only appear after sustained runtime."]
+  },
+  {
+    icon:"🎨", title:"Portfolio Polish",
+    why:"This is what turns a technically solid simulation into something a reviewer actually remembers — the visual pass and the story you tell about the architecture matter as much as the code underneath it.",
+    instructions:[
+      "Do a full pastel color and sprite pass — make sure Mochi's poses, the UI bars, and any accessories feel cohesive rather than mismatched.",
+      "Take clean screenshots: the boot sequence, Mochi in at least 3 different moods, the Memory Book screen, and the sleep-mode fade.",
+      "Record a short 30-60 second screen capture showing feeding, a mood change, sleep mode triggering, and the Memory Book — this is often more persuasive than screenshots alone.",
+      "Write the README: open with the embedded-systems framing (FSM, cooperative scheduler, simulated GPIO, power management, watchdog, persistent storage), explain plainly that sensor/hardware inputs are simulated and why that's a legitimate prototyping approach, and call out one specific technical challenge you solved.",
+      "Fill in requirements.txt, confirm the project runs with a single <code>pip install -r requirements.txt</code> and <code>python main.py</code> on a clean environment, and push it to GitHub with your screenshots/ folder included."
+    ],
+    diagram: diagPolish(),
+    checklist:["Cohesive pastel/sprite pass completed across all screens", "Screenshots taken (boot, 3+ moods, Memory Book, sleep fade)", "Short demo screen capture recorded", "README written with embedded-systems framing and one challenge solved", "Clean-environment run confirmed, pushed to GitHub with requirements.txt filled in"],
+    mistakes:["Burying the embedded-systems concepts under only the cute framing — name the FSM, scheduler, watchdog, and power management explicitly in your README so a technical reviewer doesn't have to dig for them.","Skipping the clean-environment test — a reviewer who can't get your project running in under a minute often just moves on."]
+  }
+];
+
+let current = 0;
+let doneFlags = new Array(STEPS.length).fill(false);
+
+function renderTracker(){
+  const svg = document.getElementById('circuitTracker');
+  const n = STEPS.length;
+  const w = 940, y = 40, marginX = 30;
+  const usableW = w - marginX*2;
+  const step = usableW/(n-1);
+  let html = '';
+  html += `<line x1="${marginX}" y1="${y}" x2="${w-marginX}" y2="${y}" stroke="var(--border)" stroke-width="6" stroke-linecap="round"/>`;
+  for(let i=0;i<n-1;i++){
+    if(doneFlags[i] && doneFlags[i+1]){
+      const x1 = marginX + step*i, x2 = marginX + step*(i+1);
+      html += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--green)" stroke-width="6" stroke-linecap="round"/>`;
+    } else if(doneFlags[i]){
+      const x1 = marginX + step*i, x2 = x1 + step*0.5;
+      html += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--green)" stroke-width="6" stroke-linecap="round"/>`;
+    }
+  }
+  for(let i=0;i<n;i++){
+    const x = marginX + step*i;
+    const isDone = doneFlags[i];
+    const isActive = i===current;
+    const fill = isDone ? 'var(--green)' : (isActive ? 'var(--teal)' : '#fff');
+    const stroke = isDone ? 'var(--green-dark)' : (isActive ? 'var(--teal)' : 'var(--border)');
+    html += `<circle cx="${x}" cy="${y}" r="15" fill="${fill}" stroke="${stroke}" stroke-width="3"/>`;
+    html += `<text x="${x}" y="${y+5}" text-anchor="middle" font-size="14">${isDone?'✓':STEPS[i].icon}</text>`;
+  }
+  svg.innerHTML = html;
+  document.getElementById('progressText').textContent = doneFlags.filter(Boolean).length + ' / ' + n + ' steps lit';
+}
+
+function renderStepList(){
+  const el = document.getElementById('steplist');
+  el.innerHTML = STEPS.map((s,i)=>{
+    const cls = ['step-btn', i===current?'active':'', doneFlags[i]?'done':''].join(' ').trim();
+    return `<button class="${cls}" onclick="goTo(${i})"><span class="dot">${doneFlags[i]?'✓':(i+1)}</span> ${s.icon} ${s.title}</button>`;
+  }).join('');
+}
+
+function renderPanel(){
+  const s = STEPS[current];
+  const el = document.getElementById('panel');
+  el.innerHTML = `
+    <span class="badge">STEP ${current+1} OF ${STEPS.length}</span>
+    <h2>${s.icon} ${s.title}</h2>
+    <div class="callout why"><b class="tag">💡 Why are we doing this?</b>${s.why}</div>
+    <ol class="steps-list">
+      ${s.instructions.map((t,i)=>`<li><span class="num">${i+1}</span><span>${t}</span></li>`).join('')}
+    </ol>
+    <div class="diagram-wrap">${s.diagram}</div>
+    <div class="checklist-box">
+      <b class="tag">📌 Quick checklist</b>
+      ${s.checklist.map((c,i)=>`<label class="check-row"><input type="checkbox" data-ci="${i}"><span>${c}</span></label>`).join('')}
+    </div>
+    <div class="callout mistake"><b class="tag">🚧 Common mistakes</b>
+      <ul style="margin:4px 0 0; padding-left:18px;">${s.mistakes.map(m=>`<li style="margin-bottom:4px;">${m}</li>`).join('')}</ul>
+    </div>
+    <div class="nav-row">
+      <button class="navbtn prev" onclick="goTo(${current-1})" ${current===0?'disabled':''}>⬅ Back</button>
+      <label class="done-toggle"><input type="checkbox" id="doneBox" ${doneFlags[current]?'checked':''} onchange="toggleDone(this.checked)"> Mark this step done</label>
+      <button class="navbtn next" onclick="goTo(${current+1})" ${current===STEPS.length-1?'disabled':''}>Next ➡</button>
+    </div>
+  `;
+}
+
+function toggleDone(val){ doneFlags[current] = val; renderTracker(); renderStepList(); }
+
+function goTo(i){
+  if(i<0 || i>=STEPS.length) return;
+  current = i;
+  renderPanel(); renderTracker(); renderStepList();
+  document.getElementById('panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+renderPanel(); renderTracker(); renderStepList();
+</script>
+</body>
+</html>
