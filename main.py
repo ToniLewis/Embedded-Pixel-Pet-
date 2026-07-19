@@ -1,86 +1,68 @@
 import pygame
-import time
 
 from pet import Pet
-from scheduler import Scheduler
-from storage import Storage
-from power import PowerManager
 from display import Display
 from state_machine import PetOSStateMachine, PetOSState
-from gpio import GPIO
-from watchdog import Watchdog  # remove if you don't actually have this
 
 
-def create_pet(storage: Storage) -> Pet:
-    data = storage.load()
-    if data:
-        return Pet.from_dict(data)
-    pet = Pet("Mochi")
-    return pet
-
-
-def main():
+def main() -> None:
     pygame.init()
-
-    WIDTH, HEIGHT = 320, 180
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Pixel Pet")
-
+    screen = pygame.display.set_mode((320, 180))
+    pygame.display.set_caption("Pixel PetOS")
     clock = pygame.time.Clock()
 
-    storage = Storage()
-    scheduler = Scheduler()
-    power = PowerManager()
-    display = Display(screen)
-
-    pet = create_pet(storage)
-    display.attach_pet(pet)
-
-    state_machine = PetOSStateMachine(
-        pet=pet,
-        scheduler=scheduler,
-        storage=storage,
-        power=power,
-        display=display,
-    )
-
-    gpio = GPIO(state_machine)
-    watchdog = Watchdog() if "Watchdog" in globals() else None
+    pet = Pet("Pixel")
+    display = Display(screen, pet)
+    state_machine = PetOSStateMachine(pet, display)
 
     running = True
     state_machine.set_state(PetOSState.BOOT)
-
-    print("🌼 PetOS v1.0")
-    print("Initializing GPIO... ✓")
-    print("Initializing Display... ✓")
-    print("Loading Save Data... ✓")
-    print("Starting Scheduler... ✓")
-    print("PetOS is waking up your lil buddy...")
-    print("♡")
-
-    boot_start = time.time()
+    boot_start_ms = pygame.time.get_ticks()
 
     while running:
+        dt = clock.tick(30) / 1000.0
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-        # After a short boot, go to HOME
+            # Input for memory book paging
+            if event.type == pygame.KEYDOWN:
+                if state_machine.current_state == PetOSState.MEMORY_BOOK:
+                    if event.key == pygame.K_LEFT:
+                        pet.memory_book.prev_page()
+                    elif event.key == pygame.K_RIGHT:
+                        pet.memory_book.next_page()
+
+                # Global controls
+                if event.key == pygame.K_f:
+                    state_machine.handle_action("feed")
+                    pet.add_memory("You shared a snack together.", "🍓")
+                elif event.key == pygame.K_p:
+                    state_machine.handle_action("play")
+                    pet.add_memory("You played and had fun!", "✨")
+                elif event.key == pygame.K_m:
+                    state_machine.handle_action("view_memory")
+                elif event.key == pygame.K_s:
+                    state_machine.handle_action("sleep_toggle")
+                elif event.key == pygame.K_ESCAPE:
+                    state_machine.handle_action("home")
+                elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5):
+                    index = int(event.unicode)
+                    pet.set_accessory_index(index)
+
+        # Boot to home after 1.5s
         if state_machine.current_state == PetOSState.BOOT:
-            if time.time() - boot_start > 1.5:
+            if pygame.time.get_ticks() - boot_start_ms > 1500:
                 state_machine.set_state(PetOSState.HOME)
 
-        gpio.poll_input()
-        scheduler.update()
         state_machine.update()
-
+        display.update_notification(dt)
         display.render(state_machine)
         pygame.display.flip()
 
-        clock.tick(30)
-
-    storage.save(pet.to_dict())
     pygame.quit()
+    print("🌼 PetOS shutting down. See you next time!")
 
 
 if __name__ == "__main__":
