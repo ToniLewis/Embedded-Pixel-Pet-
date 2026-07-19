@@ -4,7 +4,7 @@ from typing import Optional
 import pygame
 
 from memory_book import MemoryBook, MemoryEntry
-from pet import Pet, PetMood
+from pet import Pet
 from state_machine import PetOSState
 
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
@@ -12,11 +12,7 @@ ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
 def load_image(name: str) -> pygame.Surface:
     path = os.path.join(ASSET_DIR, name)
-    try:
-        image = pygame.image.load(path).convert_alpha()
-    except pygame.error:
-        image = pygame.Surface((32, 32))
-        image.fill((255, 0, 255))
+    image = pygame.image.load(path).convert_alpha()
     return image
 
 
@@ -87,7 +83,7 @@ class Display:
 
         status_lines = [
             f"Name: {self.pet.name}",
-            f"Mood: {self.pet.mood.name.capitalize()}",
+            f"Mood: {self.pet.mood.value.capitalize()}",
             f"Days together: {self.pet.days_together}",
         ]
         y = 10
@@ -101,9 +97,8 @@ class Display:
             "[P] Play",
             "[M] Memory book",
             "[S] Sleep / Wake",
-            "[1-5] Accessories",
         ]
-        y = HEIGHT - 80
+        y = HEIGHT - 60
         for line in hints:
             surf = self.font.render(line, True, (60, 60, 100))
             self.screen.blit(surf, (10, y))
@@ -117,10 +112,8 @@ class Display:
         self.screen.blit(title, (20, 15))
 
         options = [
-            "Feed snack [1]",
-            "Give drink [2]",
-            "Clean up [3]",
-            "Pet & comfort [4]",
+            "Feed snack [F]",
+            "Play together [P]",
             "Back [ESC or S]",
         ]
         y = 50
@@ -179,20 +172,31 @@ class Display:
         self.screen.blit(hint2, (20, HEIGHT - 18))
 
     def _get_pet_sprite(self) -> pygame.Surface:
+        """
+        Use your naming convention: base_pet_<mood>.png in assets/.
+        Example: base_pet_happy.png, base_pet_lonely.png, etc.
+        """
         if not self.pet:
             surf = pygame.Surface((32, 32))
             surf.fill((255, 0, 255))
             return surf
 
-        mood = self.pet.mood.value
-        accessory = self.pet.accessory.value
+        mood_name = self.pet.mood.value  # "happy", "lonely", etc.
 
-        key = (mood, accessory)
+        key = mood_name
         if key in self.sprite_cache:
             return self.sprite_cache[key]
 
-        filename = f"pet_{mood}_{accessory}.png"
-        sprite = load_image(filename)
+        filename = f"base_pet_{mood_name}.png"
+        path = os.path.join(ASSET_DIR, filename)
+
+        if os.path.exists(path):
+            sprite = load_image(filename)
+        else:
+            # Fallback: colored square if art is missing
+            sprite = pygame.Surface((32, 32))
+            sprite.fill((200, 200, 255))
+
         self.sprite_cache[key] = sprite
         return sprite
 
