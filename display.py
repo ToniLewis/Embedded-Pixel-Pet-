@@ -1,16 +1,19 @@
+import os
 import pygame
 from typing import Optional
 
-from pet import Pet
+from pet import Pet, Mood
+
+
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets", "sprites")
 
 
 class Display:
     """
     Handles all rendering for the Pixel Pet device:
-    - Home screen (pet stats, mood, weather).
-    - Care menu.
-    - Sleep screen.
-    - Memory book.
+    - Mood-based pet sprite.
+    - Accessory overlay sprites.
+    - Home screen stats, care menu, sleep, memory book.
     - Notifications and dialogue overlays.
     """
 
@@ -27,13 +30,18 @@ class Display:
         self.current_state = None
         self.pet: Optional[Pet] = None
 
+    def _load_sprite(self, filename: str) -> Optional[pygame.Surface]:
+        path = os.path.join(ASSETS_DIR, filename)
+        if not os.path.exists(path):
+            return None
+        image = pygame.image.load(path).convert_alpha()
+        return image
+
     def attach_pet(self, pet: Pet):
         self.pet = pet
 
     def on_state_change(self, new_state):
-        # new_state is a PetOSState enum instance
         self.current_state = new_state
-        # Clear transient UI
         self.notification = None
         self.dialogue = None
         self.idle_animation = None
@@ -52,13 +60,11 @@ class Display:
         self.idle_animation = name
 
     def render(self, state_machine):
-        # Soft pastel background
         self.screen.fill((240, 230, 255))
 
         if self.pet is None:
             self.pet = state_machine.pet
 
-        # Decide what to draw based on state name (avoids importing PetOSState)
         state_name = getattr(self.current_state, "name", None)
 
         if state_name == "BOOT":
@@ -72,9 +78,8 @@ class Display:
         elif state_name == "MEMORY_BOOK":
             self._render_memory_book()
         else:
-            self._render_home()  # fallback
+            self._render_home()
 
-        # Overlays
         self._render_notification()
         self._render_dialogue()
 
@@ -87,10 +92,34 @@ class Display:
     def _render_home(self):
         center_x, center_y = 160, 120
 
-        # Pet placeholder sprite: circle
-        pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 40)
-        pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 40, 2)
+        # Mood-based base pet sprite
+        if self.pet:
+            mood_name = self.pet.mood.name.lower()
+        else:
+            mood_name = "happy"
 
+        base_filename = f"base_pet_{mood_name}.png"
+        base_sprite = self._load_sprite(base_filename)
+
+        if base_sprite:
+            rect = base_sprite.get_rect(center=(center_x, center_y))
+            self.screen.blit(base_sprite, rect.topleft)
+        else:
+            pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 40)
+            pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 40, 2)
+
+        # Accessory sprite that matches accessory + mood
+        if self.pet and self.pet.equipped_accessory:
+            accessory_name = self.pet.equipped_accessory  # "Bow", "Sun Hat", etc.
+            accessory_key = accessory_name.lower().replace(" ", "_")
+            accessory_filename = f"accessory_{accessory_key}_{mood_name}.png"
+            accessory_sprite = self._load_sprite(accessory_filename)
+
+            if accessory_sprite:
+                acc_rect = accessory_sprite.get_rect(center=(center_x, center_y))
+                self.screen.blit(accessory_sprite, acc_rect.topleft)
+
+        # Text UI
         if self.pet:
             name_text = self.big_font.render(self.pet.name, True, (80, 40, 120))
             self.screen.blit(name_text, (20, 10))
@@ -110,12 +139,17 @@ class Display:
             )
             self.screen.blit(energy_text, (20, 100))
 
+            coins_text = self.font.render(
+                f"Coins: {int(self.pet.coins)}", True, (80, 40, 120)
+            )
+            self.screen.blit(coins_text, (20, 130))
+
         weather_text = self.font.render(f"Weather: {self.weather}", True, (80, 40, 120))
-        self.screen.blit(weather_text, (20, 130))
+        self.screen.blit(weather_text, (20, 160))
 
         if self.idle_animation:
             anim_text = self.font.render(f"* {self.idle_animation} *", True, (150, 120, 200))
-            self.screen.blit(anim_text, (20, 160))
+            self.screen.blit(anim_text, (20, 190))
 
     def _render_care_menu(self):
         title = self.big_font.render("Care Menu", True, (80, 40, 120))
