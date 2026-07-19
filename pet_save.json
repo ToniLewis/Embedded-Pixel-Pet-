@@ -1,10 +1,10 @@
 {
   "name": "toni",
-  "hunger": 31.99858374595647,
-  "energy": 77.0003540635107,
-  "affection": 49.4000708127021,
-  "health": 99.70003540635118,
-  "boredom": 25.99929187297825,
+  "hunger": 34.39746880531314,
+  "energy": 76.40063279867151,
+  "affection": 49.280126559734256,
+  "health": 99.64006327986719,
+  "boredom": 27.198734402656587,
   "days_together": 1,
   "last_interaction_time": 1784443651.0728278,
   "snacks": {
@@ -17,5 +17,7 @@
   },
   "accessories": [],
   "achievements": [],
-  "memories": []
+  "memories": [],
+  "coins": 0,
+  "equipped_accessory": null
 }
