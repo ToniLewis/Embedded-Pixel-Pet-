@@ -7,25 +7,36 @@ from memory_book import MemoryBook, MemoryEntry
 from pet import Pet
 from state_machine import PetOSState
 
+# Assets directory next to this file
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
 
 def load_image(name: str) -> pygame.Surface:
+    """
+    Load an image from the assets folder and convert it for alpha.
+    """
     path = os.path.join(ASSET_DIR, name)
     image = pygame.image.load(path).convert_alpha()
     return image
 
 
 class Display:
+    """
+    Handles all drawing for PetOS: pet sprite, HUD, menus, and memory book.
+    Uses sprite filenames like base_pet_happy.png, base_pet_lonely.png, etc.
+    """
+
     def __init__(self, screen: pygame.Surface, pet: Optional[Pet] = None) -> None:
         self.screen = screen
         self.pet: Optional[Pet] = pet
 
         pygame.font.init()
+        # If PixelOperator isn't installed, Pygame will fall back to a default font,
+        # which is fine; the warning you saw is expected.[web:173][web:175]
         self.font = pygame.font.SysFont("PixelOperator", 14)
         self.big_font = pygame.font.SysFont("PixelOperator", 20, bold=True)
 
-        self.sprite_cache = {}
+        self.sprite_cache: dict[str, pygame.Surface] = {}
         self.notification_text: Optional[str] = None
         self.notification_timer: float = 0.0
 
@@ -41,6 +52,8 @@ class Display:
             self.notification_timer -= dt
             if self.notification_timer <= 0:
                 self.notification_text = None
+
+    # ---------- main render entry ----------
 
     def render(self, state_machine) -> None:
         state = state_machine.current_state
@@ -61,7 +74,7 @@ class Display:
         if self.notification_text:
             self._render_notification()
 
-    # ----- specific screens -----
+    # ---------- specific screens ----------
 
     def _render_boot(self) -> None:
         self.screen.fill((10, 10, 20))
@@ -81,6 +94,7 @@ class Display:
         sprite_rect = pet_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.screen.blit(pet_sprite, sprite_rect)
 
+        # Status text
         status_lines = [
             f"Name: {self.pet.name}",
             f"Mood: {self.pet.mood.value.capitalize()}",
@@ -92,6 +106,7 @@ class Display:
             self.screen.blit(surf, (10, y))
             y += 16
 
+        # HUD hints
         hints = [
             "[F] Care menu",
             "[P] Play",
@@ -171,9 +186,11 @@ class Display:
         self.screen.blit(hint1, (20, HEIGHT - 32))
         self.screen.blit(hint2, (20, HEIGHT - 18))
 
+    # ---------- helpers ----------
+
     def _get_pet_sprite(self) -> pygame.Surface:
         """
-        Use your naming convention: base_pet_<mood>.png in assets/.
+        Use filenames: base_pet_<mood>.png in assets/.
         Example: base_pet_happy.png, base_pet_lonely.png, etc.
         """
         if not self.pet:
@@ -193,7 +210,7 @@ class Display:
         if os.path.exists(path):
             sprite = load_image(filename)
         else:
-            # Fallback: colored square if art is missing
+            # Fallback: simple colored square if art is missing
             sprite = pygame.Surface((32, 32))
             sprite.fill((200, 200, 255))
 
