@@ -15,8 +15,8 @@ class PetOSState(Enum):
 
 class PetOSStateMachine:
     """
-    Very simple state machine for PetOS.
-    Does not import Display to avoid circular imports.
+    Simple state machine for PetOS.
+    Does NOT import Display to avoid circular imports.
     """
 
     def __init__(self, pet: Pet, display) -> None:
@@ -41,5 +41,5 @@ class PetOSStateMachine:
             self.set_state(PetOSState.HOME)
 
     def update(self) -> None:
-        # Expand later: timers, mood decay, etc.
+        # Optional: decay hunger/fun over time later
         pass
