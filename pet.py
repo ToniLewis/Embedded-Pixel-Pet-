@@ -35,8 +35,8 @@ class Pet:
     days_together: int = 0
     is_sleeping: bool = False
 
-    hunger: int = 30    # 0 full, 100 starving
-    fun: int = 50       # 0 bored, 100 very entertained
+    hunger: int = 30
+    fun: int = 50
 
     def __post_init__(self) -> None:
         self.memory_book = MemoryBook()
@@ -64,7 +64,6 @@ class Pet:
         self.accessory = mapping.get(index, PetAccessory.NONE)
 
     def feed(self) -> None:
-        # Feeding lowers hunger, tends toward happy/hungry mood
         self.hunger = max(0, self.hunger - 20)
         if self.hunger <= 20:
             self.mood = PetMood.HAPPY
@@ -72,7 +71,6 @@ class Pet:
             self.mood = PetMood.HUNGRY
 
     def play(self) -> None:
-        # Playing raises fun, tends toward excited/happy mood
         self.fun = min(100, self.fun + 20)
         if self.fun >= 70:
             self.mood = PetMood.EXCITED
