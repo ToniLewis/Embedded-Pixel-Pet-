@@ -90,7 +90,8 @@ class Display:
         self.screen.blit(sub, (40, 80))
 
     def _render_home(self):
-        center_x, center_y = 160, 120
+        WIDTH, HEIGHT = 320, 180
+        center_x, center_y = WIDTH // 2, HEIGHT // 2  # 160, 90
 
         # Mood-based base pet sprite
         if self.pet:
@@ -105,8 +106,9 @@ class Display:
             rect = base_sprite.get_rect(center=(center_x, center_y))
             self.screen.blit(base_sprite, rect.topleft)
         else:
-            pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 40)
-            pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 40, 2)
+            # Fallback circle if sprite missing
+            pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 32)
+            pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 32, 2)
 
         # Accessory sprite that matches accessory + mood
         if self.pet and self.pet.equipped_accessory:
@@ -116,40 +118,41 @@ class Display:
             accessory_sprite = self._load_sprite(accessory_filename)
 
             if accessory_sprite:
+                # Center accessory on pet; sprite art decides what part sits high/low
                 acc_rect = accessory_sprite.get_rect(center=(center_x, center_y))
                 self.screen.blit(accessory_sprite, acc_rect.topleft)
 
-        # Text UI
+        # Text UI around the pet
         if self.pet:
             name_text = self.big_font.render(self.pet.name, True, (80, 40, 120))
-            self.screen.blit(name_text, (20, 10))
+            self.screen.blit(name_text, (10, 10))
 
             mood_text = self.font.render(
                 f"Mood: {self.pet.mood.name.title()}", True, (80, 40, 120)
             )
-            self.screen.blit(mood_text, (20, 40))
+            self.screen.blit(mood_text, (10, 30))
 
             hunger_text = self.font.render(
                 f"Hunger: {int(self.pet.hunger)}", True, (80, 40, 120)
             )
-            self.screen.blit(hunger_text, (20, 70))
+            self.screen.blit(hunger_text, (10, 50))
 
             energy_text = self.font.render(
                 f"Energy: {int(self.pet.energy)}", True, (80, 40, 120)
             )
-            self.screen.blit(energy_text, (20, 100))
+            self.screen.blit(energy_text, (10, 70))
 
             coins_text = self.font.render(
                 f"Coins: {int(self.pet.coins)}", True, (80, 40, 120)
             )
-            self.screen.blit(coins_text, (20, 130))
+            self.screen.blit(coins_text, (10, 90))
 
         weather_text = self.font.render(f"Weather: {self.weather}", True, (80, 40, 120))
-        self.screen.blit(weather_text, (20, 160))
+        self.screen.blit(weather_text, (10, 110))
 
         if self.idle_animation:
             anim_text = self.font.render(f"* {self.idle_animation} *", True, (150, 120, 200))
-            self.screen.blit(anim_text, (20, 190))
+            self.screen.blit(anim_text, (10, 130))
 
     def _render_care_menu(self):
         title = self.big_font.render("Care Menu", True, (80, 40, 120))
@@ -170,9 +173,9 @@ class Display:
     def _render_sleep(self):
         self.screen.fill((30, 10, 60))
         moon = self.big_font.render("🌙", True, (255, 255, 255))
-        self.screen.blit(moon, (140, 90))
+        self.screen.blit(moon, (140, 70))
         zzz = self.font.render("Zzz...", True, (200, 180, 255))
-        self.screen.blit(zzz, (140, 130))
+        self.screen.blit(zzz, (140, 100))
 
     def _render_memory_book(self):
         title = self.big_font.render("Memory Book", True, (80, 40, 120))
@@ -189,18 +192,19 @@ class Display:
     def _render_notification(self):
         if not self.notification:
             return
-        box_rect = pygame.Rect(10, 190, 300, 40)
+        # Adjusted for 180px height
+        box_rect = pygame.Rect(10, 140, 300, 30)
         pygame.draw.rect(self.screen, (255, 245, 255), box_rect)
         pygame.draw.rect(self.screen, (150, 120, 200), box_rect, 2)
         text = self.font.render(self.notification, True, (80, 40, 120))
-        self.screen.blit(text, (20, 200))
+        self.screen.blit(text, (15, 145))
 
     def _render_dialogue(self):
         if not self.dialogue:
             return
-        box_rect = pygame.Rect(10, 140, 300, 40)
+        box_rect = pygame.Rect(10, 110, 300, 25)
         pygame.draw.rect(self.screen, (255, 250, 255), box_rect)
         pygame.draw.rect(self.screen, (150, 120, 200), box_rect, 2)
         speaker = self.dialogue_speaker or (self.pet.name if self.pet else "")
         text = self.font.render(f"{speaker}: {self.dialogue}", True, (80, 40, 120))
-        self.screen.blit(text, (20, 150))
+        self.screen.blit(text, (15, 115))
