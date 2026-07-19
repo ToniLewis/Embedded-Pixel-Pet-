@@ -6,8 +6,7 @@ from pet import Pet, PetMood
 
 class GPIOController:
     """
-    Simulated GPIO/input layer for PetOS.
-    Uses keyboard keys to drive actions.
+    Simulated GPIO/input layer for PetOS using keyboard.
     """
 
     def __init__(self, pet: Pet, state_machine: PetOSStateMachine) -> None:
@@ -15,43 +14,43 @@ class GPIOController:
         self.state_machine = state_machine
 
     def poll_input(self) -> None:
-        keys = pygame.key.get_pressed()  # continuous key state[web:159][web:153]
+        keys = pygame.key.get_pressed()
 
-        # Global actions
+        # Feed
         if keys[pygame.K_f]:
+            self.pet.feed()
+            self.pet.add_memory("You fed your pet a tasty snack.", "🍓")
             self.state_machine.handle_action("feed")
-            self.pet.add_memory("You opened the care menu together.", "🍓")
 
+        # Play
         if keys[pygame.K_p]:
+            self.pet.play()
+            self.pet.add_memory("You played together and had fun!", "✨")
             self.state_machine.handle_action("play")
-            self.pet.add_memory("You went to play a game!", "✨")
 
+        # Memory book
         if keys[pygame.K_m]:
             self.state_machine.handle_action("view_memory")
 
+        # Sleep / wake
         if keys[pygame.K_s]:
             self.state_machine.handle_action("sleep_toggle")
 
+        # Back home
         if keys[pygame.K_ESCAPE]:
             self.state_machine.handle_action("home")
 
-        # Mood test keys (optional: cycle moods directly)
-        if keys[pygame.K_h]:
-            self.pet.set_mood(PetMood.HAPPY)
-        if keys[pygame.K_g]:
-            self.pet.set_mood(PetMood.GRUMPY)
-        if keys[pygame.K_e]:
-            self.pet.set_mood(PetMood.EXCITED)
-        if keys[pygame.K_u]:  # hungry
-            self.pet.set_mood(PetMood.HUNGRY)
-        if keys[pygame.K_l]:
-            self.pet.set_mood(PetMood.LONELY)
-        if keys[pygame.K_v]:  # love
-            self.pet.set_mood(PetMood.LOVE)
-        if keys[pygame.K_k]:  # sick
-            self.pet.set_mood(PetMood.SICK)
-        if keys[pygame.K_y]:  # sleepy
-            self.pet.set_mood(PetMood.SLEEPY)
+        # Accessories 1–5
+        if keys[pygame.K_1]:
+            self.pet.set_accessory_index(1)
+        if keys[pygame.K_2]:
+            self.pet.set_accessory_index(2)
+        if keys[pygame.K_3]:
+            self.pet.set_accessory_index(3)
+        if keys[pygame.K_4]:
+            self.pet.set_accessory_index(4)
+        if keys[pygame.K_5]:
+            self.pet.set_accessory_index(5)
 
         # Memory book paging
         if self.state_machine.current_state == PetOSState.MEMORY_BOOK:
