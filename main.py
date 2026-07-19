@@ -24,7 +24,6 @@ def main() -> None:
     while running:
         dt = clock.tick(30) / 1000.0
 
-        # Basic event loop: just handle quit here.
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -34,10 +33,7 @@ def main() -> None:
             if pygame.time.get_ticks() - boot_start_ms > 1500:
                 state_machine.set_state(PetOSState.HOME)
 
-        # Poll GPIO (keyboard) to drive actions
         gpio.poll_input()
-
-        # Update + render
         state_machine.update()
         display.update_notification(dt)
         display.render(state_machine)
