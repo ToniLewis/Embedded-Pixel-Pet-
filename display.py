@@ -7,8 +7,8 @@ from memory_book import MemoryBook
 from pet import Pet
 from state_machine import PetOSState
 
-# Assets directory next to this file
-ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
+# Assets directory: pixel-pet/assets/sprites
+ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets", "sprites")
 
 
 def load_image(name: str) -> pygame.Surface:
@@ -203,10 +203,7 @@ class Display:
 
     def _get_pet_sprite(self) -> pygame.Surface:
         """
-        Use your filenames:
-
-        - base_pet_<mood>.png
-        - accessory_<accessory>_<mood>.png when accessory != none
+        FOR NOW: Always load base_pet_happy.png so we know the sprite shows.
         """
 
         if not self.pet:
@@ -214,38 +211,23 @@ class Display:
             surf.fill((255, 0, 255))
             return surf
 
-        mood_name = self.pet.mood.value           # e.g. "sleepy"
-        accessory_name = self.pet.accessory.value # e.g. "bow", "none"
+        key = "base_pet_happy_forced"
+        if key in self.sprite_cache:
+            return self.sprite_cache[key]
 
-        cache_key = f"{accessory_name}_{mood_name}"
-        if cache_key in self.sprite_cache:
-            return self.sprite_cache[cache_key]
+        filename = "base_pet_happy.png"
+        path = os.path.join(ASSET_DIR, filename)
+        print("DEBUG loading sprite from:", path)
 
-        # 1) If accessory, try accessory_<accessory>_<mood>.png
-        if accessory_name != "none":
-            acc_filename = f"accessory_{accessory_name}_{mood_name}.png"
-            acc_path = os.path.join(ASSET_DIR, acc_filename)
-            if os.path.exists(acc_path):
-                sprite = load_image(acc_filename)
-                self.sprite_cache[cache_key] = sprite
-                return sprite
-
-        # 2) Base pet_<mood>.png
-        base_filename = f"base_pet_{mood_name}.png"
-        base_path = os.path.join(ASSET_DIR, base_filename)
-        if os.path.exists(base_path):
-            sprite = load_image(base_filename)
+        if os.path.exists(path):
+            sprite = pygame.image.load(path).convert_alpha()
+            print("DEBUG loaded base_pet_happy.png OK")
         else:
-            # 3) Fallback: base_pet_happy or colored box
-            fallback_filename = "base_pet_happy.png"
-            fallback_path = os.path.join(ASSET_DIR, fallback_filename)
-            if os.path.exists(fallback_path):
-                sprite = load_image(fallback_filename)
-            else:
-                sprite = pygame.Surface((32, 32))
-                sprite.fill((200, 0, 200))
+            print("DEBUG base_pet_happy.png NOT FOUND at that path")
+            sprite = pygame.Surface((32, 32))
+            sprite.fill((255, 0, 255))
 
-        self.sprite_cache[cache_key] = sprite
+        self.sprite_cache[key] = sprite
         return sprite
 
     def _render_notification(self) -> None:
