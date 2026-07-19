@@ -1,209 +1,233 @@
 import os
-import pygame
 from typing import Optional
 
-from pet import Pet, Mood
+import pygame
+
+from memory_book import MemoryBook, MemoryEntry
+from pet import Pet
+from state_machine import PetOSState
 
 
-ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets", "sprites")
+ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
 
-class Display:
-    """
-    Handles all rendering for the Pixel Pet device:
-    - Single sprite per frame that already includes mood + outfit.
-    - Home screen stats, care menu, sleep screen, memory book.
-    - Notifications and dialogue overlays.
-    """
-
-    def __init__(self, screen: pygame.Surface):
-        self.screen = screen
-        self.font = pygame.font.SysFont("Arial", 18)
-        self.big_font = pygame.font.SysFont("Arial", 24)
-
-        self.notification: Optional[str] = None
-        self.dialogue: Optional[str] = None
-        self.dialogue_speaker: Optional[str] = None
-        self.weather: str = "Sunny"
-        self.idle_animation: Optional[str] = None
-        self.current_state = None
-        self.pet: Optional[Pet] = None
-
-    def _load_sprite(self, filename: str) -> Optional[pygame.Surface]:
-        path = os.path.join(ASSETS_DIR, filename)
-        if not os.path.exists(path):
-            return None
+def load_image(name: str) -> pygame.Surface:
+    path = os.path.join(ASSET_DIR, name)
+    try:
         image = pygame.image.load(path).convert_alpha()
-        return image
+    except pygame.error:
+        # Fallback: simple colored box if missing
+        image = pygame.Surface((32, 32))
+        image.fill((255, 0, 255))
+    return image
 
-    def attach_pet(self, pet: Pet):
+
+class PetDisplay:
+    """
+    Handles all drawing for PetOS: pet sprite, HUD, menus, and memory book.
+    """
+
+    def __init__(self, screen: pygame.Surface, pet: Optional[Pet] = None) -> None:
+        self.screen = screen
+        self.pet: Optional[Pet] = pet
+
+        # Fonts
+        pygame.font.init()
+        self.font = pygame.font.SysFont("PixelOperator", 14)
+        self.big_font = pygame.font.SysFont("PixelOperator", 20, bold=True)
+
+        # Cached images by mood/accessory
+        self.sprite_cache = {}
+
+        # Notification system (simple text line)
+        self.notification_text: Optional[str] = None
+        self.notification_timer: float = 0.0
+
+    def set_pet(self, pet: Pet) -> None:
         self.pet = pet
 
-    def on_state_change(self, new_state):
-        self.current_state = new_state
-        self.notification = None
-        self.dialogue = None
-        self.idle_animation = None
+    def show_notification(self, text: str, duration: float = 2.0) -> None:
+        self.notification_text = text
+        self.notification_timer = duration
 
-    def show_notification(self, text: str):
-        self.notification = text
+    def update_notification(self, dt: float) -> None:
+        if self.notification_timer > 0:
+            self.notification_timer -= dt
+            if self.notification_timer <= 0:
+                self.notification_text = None
 
-    def show_dialogue(self, speaker: str, text: str):
-        self.dialogue_speaker = speaker
-        self.dialogue = text
+    # ---------- Core render entry ----------
 
-    def set_weather(self, weather: str):
-        self.weather = weather
+    def render(self, state_machine) -> None:
+        state = state_machine.current_state
 
-    def queue_idle_animation(self, name: str):
-        self.idle_animation = name
-
-    def render(self, state_machine):
-        self.screen.fill((240, 230, 255))
-
-        if self.pet is None:
-            self.pet = state_machine.pet
-
-        state_name = getattr(self.current_state, "name", None)
-
-        if state_name == "BOOT":
+        if state == PetOSState.BOOT:
             self._render_boot()
-        elif state_name == "HOME":
+        elif state == PetOSState.HOME:
             self._render_home()
-        elif state_name == "CARE_MENU":
+        elif state == PetOSState.CARE_MENU:
             self._render_care_menu()
-        elif state_name == "SLEEP":
-            self._render_sleep()
-        elif state_name == "MEMORY_BOOK":
+        elif state == PetOSState.MINI_GAME:
+            self._render_minigame()
+        elif state == PetOSState.MEMORY_BOOK:
             self._render_memory_book()
         else:
+            # Fallback: just show home
             self._render_home()
 
-        self._render_notification()
-        self._render_dialogue()
+        # Notification overlay
+        if self.notification_text:
+            self._render_notification()
 
-    def _render_boot(self):
-        text = self.big_font.render("🌼 PetOS v1.0", True, (80, 40, 120))
-        self.screen.blit(text, (40, 40))
-        sub = self.font.render("Waking up your lil buddy...", True, (80, 40, 120))
-        self.screen.blit(sub, (40, 80))
+    # ---------- Screen-specific render methods ----------
 
-    def _choose_pet_sprite_filename(self) -> str:
-        """
-        Decide which single sprite file to use based on mood + equipped accessory.
-        Uses your naming convention:
-        - base_pet_<mood>.png
-        - accessory_<accessory>_<mood>.png
-        """
+    def _render_boot(self) -> None:
+        self.screen.fill((10, 10, 20))
+        title = self.big_font.render("🌼 PetOS v1.0", True, (240, 240, 240))
+        msg = self.font.render("Waking up your lil buddy...", True, (200, 200, 200))
+        self.screen.blit(title, (20, 40))
+        self.screen.blit(msg, (20, 70))
+
+    def _render_home(self) -> None:
+        WIDTH, HEIGHT = self.screen.get_size()
+        self.screen.fill((230, 250, 255))
+
         if not self.pet:
-            return "base_pet_happy.png"
+            return
 
-        mood_name = self.pet.mood.name.lower()
+        # Pet sprite
+        pet_sprite = self._get_pet_sprite()
+        sprite_rect = pet_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        self.screen.blit(pet_sprite, sprite_rect)
 
-        if self.pet.equipped_accessory:
-            accessory_name = self.pet.equipped_accessory  # e.g. "Bow", "Sun Hat"
-            accessory_key = accessory_name.lower().replace(" ", "_")
-            return f"accessory_{accessory_key}_{mood_name}.png"
-        else:
-            return f"base_pet_{mood_name}.png"
+        # Status text
+        status_lines = [
+            f"Name: {self.pet.name}",
+            f"Mood: {self.pet.mood.name.capitalize()}",
+            f"Days together: {self.pet.days_together}",
+        ]
+        y = 10
+        for line in status_lines:
+            surf = self.font.render(line, True, (40, 40, 80))
+            self.screen.blit(surf, (10, y))
+            y += 16
 
-    def _render_home(self):
-        WIDTH, HEIGHT = 320, 180
-        center_x, center_y = WIDTH // 2, HEIGHT // 2  # 160, 90
+        # HUD hints
+        hints = [
+            "[F] Care menu",
+            "[P] Play",
+            "[M] Memory book",
+            "[S] Sleep / Wake",
+            "[1-5] Accessories",
+        ]
+        y = HEIGHT - 80
+        for line in hints:
+            surf = self.font.render(line, True, (60, 60, 100))
+            self.screen.blit(surf, (10, y))
+            y += 14
 
-        # Pick exactly one sprite file that already contains mood + outfit
-        sprite_filename = self._choose_pet_sprite_filename()
-        sprite = self._load_sprite(sprite_filename)
+    def _render_care_menu(self) -> None:
+        WIDTH, HEIGHT = self.screen.get_size()
+        self.screen.fill((255, 245, 230))
 
-        if sprite:
-            rect = sprite.get_rect(center=(center_x, center_y))
-            self.screen.blit(sprite, rect.topleft)
-        else:
-            pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 32)
-            pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 32, 2)
-
-        # Text UI
-        if self.pet:
-            name_text = self.big_font.render(self.pet.name, True, (80, 40, 120))
-            self.screen.blit(name_text, (10, 10))
-
-            mood_text = self.font.render(
-                f"Mood: {self.pet.mood.name.title()}", True, (80, 40, 120)
-            )
-            self.screen.blit(mood_text, (10, 30))
-
-            hunger_text = self.font.render(
-                f"Hunger: {int(self.pet.hunger)}", True, (80, 40, 120)
-            )
-            self.screen.blit(hunger_text, (10, 50))
-
-            energy_text = self.font.render(
-                f"Energy: {int(self.pet.energy)}", True, (80, 40, 120)
-            )
-            self.screen.blit(energy_text, (10, 70))
-
-            coins_text = self.font.render(
-                f"Coins: {int(self.pet.coins)}", True, (80, 40, 120)
-            )
-            self.screen.blit(coins_text, (10, 90))
-
-        weather_text = self.font.render(f"Weather: {self.weather}", True, (80, 40, 120))
-        self.screen.blit(weather_text, (10, 110))
-
-        if self.idle_animation:
-            anim_text = self.font.render(f"* {self.idle_animation} *", True, (150, 120, 200))
-            self.screen.blit(anim_text, (10, 130))
-
-    def _render_care_menu(self):
-        title = self.big_font.render("Care Menu", True, (80, 40, 120))
-        self.screen.blit(title, (20, 10))
+        title = self.big_font.render("Care Menu", True, (120, 70, 20))
+        self.screen.blit(title, (20, 15))
 
         options = [
-            "F: Feed (1–6 to choose snack)",
-            "P: Play",
-            "M: Memory Book",
-            "S: Sleep/Wake",
+            "Feed snack [1]",
+            "Give drink [2]",
+            "Clean up [3]",
+            "Pet & comfort [4]",
+            "Back [ESC or S]",
         ]
         y = 50
         for opt in options:
-            text = self.font.render(opt, True, (80, 40, 120))
-            self.screen.blit(text, (20, y))
-            y += 30
+            surf = self.font.render(opt, True, (100, 60, 20))
+            self.screen.blit(surf, (30, y))
+            y += 20
 
-    def _render_sleep(self):
-        self.screen.fill((30, 10, 60))
-        moon = self.big_font.render("🌙", True, (255, 255, 255))
-        self.screen.blit(moon, (140, 70))
-        zzz = self.font.render("Zzz...", True, (200, 180, 255))
-        self.screen.blit(zzz, (140, 100))
+    def _render_minigame(self) -> None:
+        WIDTH, HEIGHT = self.screen.get_size()
+        self.screen.fill((220, 240, 220))
 
-    def _render_memory_book(self):
-        title = self.big_font.render("Memory Book", True, (80, 40, 120))
+        title = self.big_font.render("Mini Game", True, (20, 90, 40))
+        self.screen.blit(title, (20, 15))
+
+        msg = self.font.render("This is a placeholder for future games!", True, (30, 80, 40))
+        self.screen.blit(msg, (20, 50))
+
+        hint = self.font.render("Press S or ESC to return home", True, (30, 80, 40))
+        self.screen.blit(hint, (20, HEIGHT - 30))
+
+    def _render_memory_book(self) -> None:
+        WIDTH, HEIGHT = self.screen.get_size()
+        self.screen.fill((240, 230, 255))
+
+        title = self.big_font.render("Memory Book ♡", True, (80, 40, 120))
         self.screen.blit(title, (20, 10))
-        y = 40
-        if self.pet:
-            for entry in self.pet.memories[-5:]:
+
+        if not self.pet or not self.pet.memory_book.entries:
+            msg = self.font.render("No memories yet... make some!", True, (80, 40, 120))
+            self.screen.blit(msg, (20, 50))
+        else:
+            book: MemoryBook = self.pet.memory_book
+            page_entries: list[MemoryEntry] = book.get_page(book.current_page)
+
+            y = 50
+            for entry in page_entries:
                 text = self.font.render(
-                    f"Day {entry.day}: {entry.text} {entry.emoji}", True, (80, 40, 120)
+                    f"Day {entry.day}: {entry.text} {entry.emoji}",
+                    True,
+                    (80, 40, 120),
                 )
                 self.screen.blit(text, (20, y))
-                y += 25
+                y += 22
 
-    def _render_notification(self):
-        if not self.notification:
-            return
-        box_rect = pygame.Rect(10, 140, 300, 30)
-        pygame.draw.rect(self.screen, (255, 245, 255), box_rect)
-        pygame.draw.rect(self.screen, (150, 120, 200), box_rect, 2)
-        text = self.font.render(self.notification, True, (80, 40, 120))
-        self.screen.blit(text, (15, 145))
+            # Page indicator
+            page_info = self.font.render(
+                f"Page {book.current_page + 1}/{book.page_count()}",
+                True,
+                (120, 80, 160),
+            )
+            self.screen.blit(page_info, (20, HEIGHT - 50))
 
-    def _render_dialogue(self):
-        if not self.dialogue:
-            return
-        box_rect = pygame.Rect(10, 110, 300, 25)
-        pygame.draw.rect(self.screen, (255, 250, 255), box_rect)
-        pygame.draw.rect(self.screen, (150, 120, 200), box_rect, 2)
-        speaker = self.dialogue_speaker or (self.pet.name if self.pet else "")
-        text = self.font.render(f"{speaker}: {self.dialogue}", True, (80, 40, 120))
-        self.screen.blit(text, (15, 115))
+        # Navigation hints
+        hint1 = self.font.render("← / → to change page", True, (120, 80, 160))
+        hint2 = self.font.render("Press M or S to go home", True, (120, 80, 160))
+        self.screen.blit(hint1, (20, HEIGHT - 32))
+        self.screen.blit(hint2, (20, HEIGHT - 18))
+
+    # ---------- Helpers ----------
+
+    def _get_pet_sprite(self) -> pygame.Surface:
+        """
+        Load and cache pet sprite based on mood + accessory.
+        Adjust filenames to match your actual assets.
+        """
+        if not self.pet:
+            surf = pygame.Surface((32, 32))
+            surf.fill((255, 0, 255))
+            return surf
+
+        mood = self.pet.mood.name.lower()
+        accessory = self.pet.accessory.name.lower() if getattr(self.pet, "accessory", None) else "none"
+
+        key = (mood, accessory)
+        if key in self.sprite_cache:
+            return self.sprite_cache[key]
+
+        # Example filename pattern: pet_happy_none.png, pet_lonely_scarf.png, etc.
+        filename = f"pet_{mood}_{accessory}.png"
+        sprite = load_image(filename)
+        self.sprite_cache[key] = sprite
+        return sprite
+
+    def _render_notification(self) -> None:
+        WIDTH, HEIGHT = self.screen.get_size()
+        bar_height = 24
+        rect = pygame.Rect(0, HEIGHT - bar_height, WIDTH, bar_height)
+        pygame.draw.rect(self.screen, (0, 0, 0), rect)
+
+        if self.notification_text:
+            surf = self.font.render(self.notification_text, True, (255, 255, 255))
+            self.screen.blit(surf, (6, HEIGHT - bar_height + 4))
