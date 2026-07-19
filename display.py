@@ -11,9 +11,8 @@ ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets", "sprites")
 class Display:
     """
     Handles all rendering for the Pixel Pet device:
-    - Mood-based pet sprite.
-    - Accessory overlay sprites.
-    - Home screen stats, care menu, sleep, memory book.
+    - Single sprite per frame that already includes mood + outfit.
+    - Home screen stats, care menu, sleep screen, memory book.
     - Notifications and dialogue overlays.
     """
 
@@ -89,40 +88,42 @@ class Display:
         sub = self.font.render("Waking up your lil buddy...", True, (80, 40, 120))
         self.screen.blit(sub, (40, 80))
 
+    def _choose_pet_sprite_filename(self) -> str:
+        """
+        Decide which single sprite file to use based on mood + equipped accessory.
+        Uses your naming convention:
+        - base_pet_<mood>.png
+        - accessory_<accessory>_<mood>.png
+        """
+        if not self.pet:
+            return "base_pet_happy.png"
+
+        mood_name = self.pet.mood.name.lower()
+
+        if self.pet.equipped_accessory:
+            accessory_name = self.pet.equipped_accessory  # e.g. "Bow", "Sun Hat"
+            accessory_key = accessory_name.lower().replace(" ", "_")
+            return f"accessory_{accessory_key}_{mood_name}.png"
+        else:
+            return f"base_pet_{mood_name}.png"
+
     def _render_home(self):
         WIDTH, HEIGHT = 320, 180
         center_x, center_y = WIDTH // 2, HEIGHT // 2  # 160, 90
 
-        # Mood-based base pet sprite
-        if self.pet:
-            mood_name = self.pet.mood.name.lower()
-        else:
-            mood_name = "happy"
+        # Pick exactly one sprite file that already contains mood + outfit
+        sprite_filename = self._choose_pet_sprite_filename()
+        sprite = self._load_sprite(sprite_filename)
 
-        base_filename = f"base_pet_{mood_name}.png"
-        base_sprite = self._load_sprite(base_filename)
-
-        if base_sprite:
-            rect = base_sprite.get_rect(center=(center_x, center_y))
-            self.screen.blit(base_sprite, rect.topleft)
+        if sprite:
+            rect = sprite.get_rect(center=(center_x, center_y))
+            self.screen.blit(sprite, rect.topleft)
         else:
             # Fallback circle if sprite missing
             pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 32)
             pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 32, 2)
 
-        # Accessory sprite that matches accessory + mood
-        if self.pet and self.pet.equipped_accessory:
-            accessory_name = self.pet.equipped_accessory  # "Bow", "Sun Hat", etc.
-            accessory_key = accessory_name.lower().replace(" ", "_")
-            accessory_filename = f"accessory_{accessory_key}_{mood_name}.png"
-            accessory_sprite = self._load_sprite(accessory_filename)
-
-            if accessory_sprite:
-                # Center accessory on pet; sprite art decides what part sits high/low
-                acc_rect = accessory_sprite.get_rect(center=(center_x, center_y))
-                self.screen.blit(accessory_sprite, acc_rect.topleft)
-
-        # Text UI around the pet
+        # Text UI
         if self.pet:
             name_text = self.big_font.render(self.pet.name, True, (80, 40, 120))
             self.screen.blit(name_text, (10, 10))
@@ -192,7 +193,6 @@ class Display:
     def _render_notification(self):
         if not self.notification:
             return
-        # Adjusted for 180px height
         box_rect = pygame.Rect(10, 140, 300, 30)
         pygame.draw.rect(self.screen, (255, 245, 255), box_rect)
         pygame.draw.rect(self.screen, (150, 120, 200), box_rect, 2)
