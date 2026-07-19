@@ -19,11 +19,14 @@ def load_image(name: str) -> pygame.Surface:
 
 class Display:
     """
-    Handles drawing for PetOS using your filenames:
+    Handles drawing for PetOS.
 
+    Uses your files:
     - base_pet_<mood>.png
     - accessory_<accessory>_<mood>.png
     - base_pet_feed.png, base_pet_play.png
+
+    All sprites are assumed to be 128x128 and drawn at native size.
     """
 
     def __init__(self, screen: pygame.Surface, pet: Optional[Pet] = None) -> None:
@@ -86,10 +89,12 @@ class Display:
         if not self.pet:
             return
 
+        # Pet sprite at native 128x128
         pet_sprite = self._get_pet_sprite()
         sprite_rect = pet_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.screen.blit(pet_sprite, sprite_rect)
 
+        # Status text
         status_lines = [
             f"Name: {self.pet.name}",
             f"Mood: {self.pet.mood.value.capitalize()}",
@@ -104,6 +109,7 @@ class Display:
             self.screen.blit(surf, (10, y))
             y += 16
 
+        # HUD hints
         hints = [
             "[F] Feed / Care menu",
             "[P] Play",
@@ -134,7 +140,7 @@ class Display:
             self.screen.blit(surf, (30, y))
             y += 20
 
-        # Show explicit feed sprite
+        # Show explicit feed sprite if present (128x128)
         try:
             feed_sprite = load_image("base_pet_feed.png")
             rect = feed_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
@@ -155,7 +161,7 @@ class Display:
         hint = self.font.render("Press S or ESC to return home", True, (30, 80, 40))
         self.screen.blit(hint, (20, HEIGHT - 30))
 
-        # Show explicit play sprite
+        # Show explicit play sprite if present (128x128)
         try:
             play_sprite = load_image("base_pet_play.png")
             rect = play_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
@@ -203,31 +209,50 @@ class Display:
 
     def _get_pet_sprite(self) -> pygame.Surface:
         """
-        FOR NOW: Always load base_pet_happy.png so we know the sprite shows.
+        Choose sprite based on accessory + mood using your filenames:
+
+        - accessory_<accessory>_<mood>.png (if accessory != none and file exists)
+        - base_pet_<mood>.png
+        - base_pet_happy.png as final fallback
         """
 
         if not self.pet:
-            surf = pygame.Surface((32, 32))
+            surf = pygame.Surface((128, 128))
             surf.fill((255, 0, 255))
             return surf
 
-        key = "base_pet_happy_forced"
-        if key in self.sprite_cache:
-            return self.sprite_cache[key]
+        mood_name = self.pet.mood.value           # "happy", "sleepy", ...
+        accessory_name = self.pet.accessory.value # "none", "bow", ...
 
-        filename = "base_pet_happy.png"
-        path = os.path.join(ASSET_DIR, filename)
-        print("DEBUG loading sprite from:", path)
+        cache_key = f"{accessory_name}_{mood_name}"
+        if cache_key in self.sprite_cache:
+            return self.sprite_cache[cache_key]
 
-        if os.path.exists(path):
-            sprite = pygame.image.load(path).convert_alpha()
-            print("DEBUG loaded base_pet_happy.png OK")
+        # 1) accessory_<accessory>_<mood>.png
+        if accessory_name != "none":
+            acc_filename = f"accessory_{accessory_name}_{mood_name}.png"
+            acc_path = os.path.join(ASSET_DIR, acc_filename)
+            if os.path.exists(acc_path):
+                sprite = load_image(acc_filename)
+                self.sprite_cache[cache_key] = sprite
+                return sprite
+
+        # 2) base_pet_<mood>.png
+        base_filename = f"base_pet_{mood_name}.png"
+        base_path = os.path.join(ASSET_DIR, base_filename)
+        if os.path.exists(base_path):
+            sprite = load_image(base_filename)
         else:
-            print("DEBUG base_pet_happy.png NOT FOUND at that path")
-            sprite = pygame.Surface((32, 32))
-            sprite.fill((255, 0, 255))
+            # 3) fallback: base_pet_happy.png
+            fallback_filename = "base_pet_happy.png"
+            fallback_path = os.path.join(ASSET_DIR, fallback_filename)
+            if os.path.exists(fallback_path):
+                sprite = load_image(fallback_filename)
+            else:
+                sprite = pygame.Surface((128, 128))
+                sprite.fill((200, 0, 200))
 
-        self.sprite_cache[key] = sprite
+        self.sprite_cache[cache_key] = sprite
         return sprite
 
     def _render_notification(self) -> None:
