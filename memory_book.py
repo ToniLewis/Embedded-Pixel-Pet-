@@ -22,13 +22,11 @@ class MemoryEntry:
 
 class MemoryBook:
     """
-    A cozy log of your pet's memories.
-    Stores entries and provides simple paging for the UI.
+    A cozy log of your pet's memories with simple paging.
     """
 
     def __init__(self) -> None:
         self._entries: List[MemoryEntry] = []
-        # For paging / scrolling in the UI
         self.page_size: int = 6
         self.current_page: int = 0
 
@@ -37,8 +35,7 @@ class MemoryBook:
         return self._entries
 
     def add_memory(self, day: int, text: str, emoji: str = "♡") -> None:
-        entry = MemoryEntry(day=day, text=text, emoji=emoji)
-        self._entries.append(entry)
+        self._entries.append(MemoryEntry(day=day, text=text, emoji=emoji))
 
     def clear(self) -> None:
         self._entries.clear()
@@ -67,7 +64,6 @@ class MemoryBook:
         if self.current_page > 0:
             self.current_page -= 1
 
-    # Serialization for save data
     def to_dict(self) -> Dict[str, Any]:
         return {
             "entries": [e.to_dict() for e in self._entries],
@@ -78,7 +74,6 @@ class MemoryBook:
     def from_dict(data: Dict[str, Any]) -> "MemoryBook":
         book = MemoryBook()
         book.page_size = data.get("page_size", 6)
-        entries_data = data.get("entries", [])
-        for e in entries_data:
+        for e in data.get("entries", []):
             book.entries.append(MemoryEntry.from_dict(e))
         return book
