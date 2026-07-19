@@ -3,6 +3,8 @@ from enum import Enum, auto
 import time
 from typing import List, Dict
 
+from accessories import ACCESSORY_CATALOG  # <-- top-level import
+
 
 class Mood(Enum):
     HAPPY = auto()
@@ -40,10 +42,12 @@ class Pet:
         "Rice Ball": 2,
         "Tea": 2,
     })
-    accessories: List[str] = field(default_factory=list)
+    accessories: List[str] = field(default_factory=list)   # unlocked accessories
     achievements: List[str] = field(default_factory=list)
     memories: List[MemoryEntry] = field(default_factory=list)
     mood: Mood = Mood.HAPPY
+    coins: int = 0
+    equipped_accessory: str | None = None
 
     def to_dict(self) -> Dict:
         return {
@@ -62,6 +66,8 @@ class Pet:
                 {"day": m.day, "text": m.text, "emoji": m.emoji}
                 for m in self.memories
             ],
+            "coins": self.coins,
+            "equipped_accessory": self.equipped_accessory,
         }
 
     @classmethod
@@ -78,7 +84,9 @@ class Pet:
             snacks=data.get("snacks", {}),
             accessories=data.get("accessories", []),
             achievements=data.get("achievements", []),
+            coins=data.get("coins", 0),
         )
+        pet.equipped_accessory = data.get("equipped_accessory")
         pet.memories = [
             MemoryEntry(day=m["day"], text=m["text"], emoji=m.get("emoji", "♡"))
             for m in data.get("memories", [])
@@ -166,3 +174,33 @@ class Pet:
     def add_memory(self, text: str, emoji: str = "♡"):
         entry = MemoryEntry(day=self.days_together, text=text, emoji=emoji)
         self.memories.append(entry)
+
+    def earn_coins(self, amount: int):
+        """Increase the pet's coins by a positive amount."""
+        self.coins = max(0, self.coins + amount)
+
+    def buy_accessory(self, name: str) -> bool:
+        """
+        Try to buy an accessory from the catalog.
+
+        Returns True if the purchase succeeded, False otherwise.
+        """
+        acc = ACCESSORY_CATALOG.get(name)
+        if acc is None:
+            return False
+        if self.coins < acc.cost:
+            return False
+
+        self.coins -= acc.cost
+        if name not in self.accessories:
+            self.accessories.append(name)
+            self.add_memory(f"You unlocked a {name.lower()}!", "🎀")
+        return True
+
+    def equip_accessory(self, name: str):
+        """
+        Equip an accessory that has already been unlocked.
+        """
+        if name in self.accessories:
+            self.equipped_accessory = name
+            self.add_memory(f"You equipped my {name.lower()}!", "🌸")
