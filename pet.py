@@ -132,12 +132,10 @@ class Pet:
         self.update_mood()
 
     def tick_idle(self, dt: float):
-        # Simple decay/growth over time
         self.hunger = min(100, self.hunger + dt * 0.2)
         self.energy = max(0, self.energy - dt * 0.05)
         self.boredom = min(100, self.boredom + dt * 0.1)
 
-        # Affection and health decay slowly
         self.affection = max(0, self.affection - dt * 0.01)
         self.health = max(0, self.health - dt * 0.005)
 
