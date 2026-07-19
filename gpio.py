@@ -1,7 +1,7 @@
 import pygame
 
 from state_machine import PetOSStateMachine, PetOSState
-from pet import Pet, PetMood
+from pet import Pet
 
 
 class GPIOController:
