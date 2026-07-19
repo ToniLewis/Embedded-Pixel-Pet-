@@ -4,9 +4,8 @@ from typing import Optional
 import pygame
 
 from memory_book import MemoryBook, MemoryEntry
-from pet import Pet
+from pet import Pet, PetMood
 from state_machine import PetOSState
-
 
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
@@ -16,30 +15,21 @@ def load_image(name: str) -> pygame.Surface:
     try:
         image = pygame.image.load(path).convert_alpha()
     except pygame.error:
-        # Fallback: simple colored box if missing
         image = pygame.Surface((32, 32))
         image.fill((255, 0, 255))
     return image
 
 
-class PetDisplay:
-    """
-    Handles all drawing for PetOS: pet sprite, HUD, menus, and memory book.
-    """
-
+class Display:
     def __init__(self, screen: pygame.Surface, pet: Optional[Pet] = None) -> None:
         self.screen = screen
         self.pet: Optional[Pet] = pet
 
-        # Fonts
         pygame.font.init()
         self.font = pygame.font.SysFont("PixelOperator", 14)
         self.big_font = pygame.font.SysFont("PixelOperator", 20, bold=True)
 
-        # Cached images by mood/accessory
         self.sprite_cache = {}
-
-        # Notification system (simple text line)
         self.notification_text: Optional[str] = None
         self.notification_timer: float = 0.0
 
@@ -56,8 +46,6 @@ class PetDisplay:
             if self.notification_timer <= 0:
                 self.notification_text = None
 
-    # ---------- Core render entry ----------
-
     def render(self, state_machine) -> None:
         state = state_machine.current_state
 
@@ -72,14 +60,12 @@ class PetDisplay:
         elif state == PetOSState.MEMORY_BOOK:
             self._render_memory_book()
         else:
-            # Fallback: just show home
             self._render_home()
 
-        # Notification overlay
         if self.notification_text:
             self._render_notification()
 
-    # ---------- Screen-specific render methods ----------
+    # ----- specific screens -----
 
     def _render_boot(self) -> None:
         self.screen.fill((10, 10, 20))
@@ -95,12 +81,10 @@ class PetDisplay:
         if not self.pet:
             return
 
-        # Pet sprite
         pet_sprite = self._get_pet_sprite()
         sprite_rect = pet_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.screen.blit(pet_sprite, sprite_rect)
 
-        # Status text
         status_lines = [
             f"Name: {self.pet.name}",
             f"Mood: {self.pet.mood.name.capitalize()}",
@@ -112,7 +96,6 @@ class PetDisplay:
             self.screen.blit(surf, (10, y))
             y += 16
 
-        # HUD hints
         hints = [
             "[F] Care menu",
             "[P] Play",
@@ -171,10 +154,10 @@ class PetDisplay:
             self.screen.blit(msg, (20, 50))
         else:
             book: MemoryBook = self.pet.memory_book
-            page_entries: list[MemoryEntry] = book.get_page(book.current_page)
+            entries = book.get_page(book.current_page)
 
             y = 50
-            for entry in page_entries:
+            for entry in entries:
                 text = self.font.render(
                     f"Day {entry.day}: {entry.text} {entry.emoji}",
                     True,
@@ -183,7 +166,6 @@ class PetDisplay:
                 self.screen.blit(text, (20, y))
                 y += 22
 
-            # Page indicator
             page_info = self.font.render(
                 f"Page {book.current_page + 1}/{book.page_count()}",
                 True,
@@ -191,32 +173,24 @@ class PetDisplay:
             )
             self.screen.blit(page_info, (20, HEIGHT - 50))
 
-        # Navigation hints
         hint1 = self.font.render("← / → to change page", True, (120, 80, 160))
         hint2 = self.font.render("Press M or S to go home", True, (120, 80, 160))
         self.screen.blit(hint1, (20, HEIGHT - 32))
         self.screen.blit(hint2, (20, HEIGHT - 18))
 
-    # ---------- Helpers ----------
-
     def _get_pet_sprite(self) -> pygame.Surface:
-        """
-        Load and cache pet sprite based on mood + accessory.
-        Adjust filenames to match your actual assets.
-        """
         if not self.pet:
             surf = pygame.Surface((32, 32))
             surf.fill((255, 0, 255))
             return surf
 
-        mood = self.pet.mood.name.lower()
-        accessory = self.pet.accessory.name.lower() if getattr(self.pet, "accessory", None) else "none"
+        mood = self.pet.mood.value
+        accessory = self.pet.accessory.value
 
         key = (mood, accessory)
         if key in self.sprite_cache:
             return self.sprite_cache[key]
 
-        # Example filename pattern: pet_happy_none.png, pet_lonely_scarf.png, etc.
         filename = f"pet_{mood}_{accessory}.png"
         sprite = load_image(filename)
         self.sprite_cache[key] = sprite
