@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pet import Pet
 
@@ -15,16 +14,18 @@ class PetOSState(Enum):
 
 
 class PetOSStateMachine:
+    """
+    Very simple state machine for PetOS.
+    Does not import Display to avoid circular imports.
+    """
+
     def __init__(self, pet: Pet, display) -> None:
         self.pet = pet
-        # display is any object with .show_notification() etc.
         self.display = display
         self.current_state: PetOSState = PetOSState.BOOT
 
     def set_state(self, new_state: PetOSState) -> None:
         self.current_state = new_state
-
-    # High-level actions called from input/gpio
 
     def handle_action(self, action: str) -> None:
         if action == "feed":
@@ -40,5 +41,5 @@ class PetOSStateMachine:
             self.set_state(PetOSState.HOME)
 
     def update(self) -> None:
-        # You can grow this later: mood changes, timers, etc.
+        # Expand later: timers, mood decay, etc.
         pass
