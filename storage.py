@@ -1,30 +1,30 @@
 import json
 import os
-from typing import Optional, Dict
+from typing import Dict, Any, Optional
 
 
-SAVE_PATH = os.path.join(os.path.dirname(__file__), "pet_save.json")
+SAVE_FILE = os.path.join(os.path.dirname(__file__), "save.json")
 
 
 class Storage:
     """
-    Simulated persistent storage for Pixel Pet.
-    Uses a JSON file as a stand-in for EEPROM/flash.
+    Very simple JSON-based storage for the pet state.
     """
 
-    def load_pet_data(self) -> Optional[Dict]:
-        if not os.path.exists(SAVE_PATH):
+    def load(self) -> Optional[Dict[str, Any]]:
+        if not os.path.exists(SAVE_FILE):
             return None
         try:
-            with open(SAVE_PATH, "r", encoding="utf-8") as f:
+            with open(SAVE_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
+            # If anything goes wrong, start fresh
             return None
 
-    def save_pet_data(self, data: Dict):
+    def save(self, data: Dict[str, Any]) -> None:
         try:
-            with open(SAVE_PATH, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            with open(SAVE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception:
-            # In a real embedded system you'd log this somewhere
+            # You can log this or ignore for now
             pass
