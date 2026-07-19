@@ -3,10 +3,11 @@ from typing import Optional
 
 import pygame
 
-from memory_book import MemoryBook, MemoryEntry
-from pet import Pet, PetMood, PetAccessory
+from memory_book import MemoryBook
+from pet import Pet
 from state_machine import PetOSState
 
+# Assets directory next to this file
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
 
@@ -18,7 +19,8 @@ def load_image(name: str) -> pygame.Surface:
 
 class Display:
     """
-    Handles drawing for PetOS using:
+    Handles drawing for PetOS using your filenames:
+
     - base_pet_<mood>.png
     - accessory_<accessory>_<mood>.png
     - base_pet_feed.png, base_pet_play.png
@@ -132,7 +134,7 @@ class Display:
             self.screen.blit(surf, (30, y))
             y += 20
 
-        # Show explicit feed sprite if available
+        # Show explicit feed sprite
         try:
             feed_sprite = load_image("base_pet_feed.png")
             rect = feed_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
@@ -153,7 +155,7 @@ class Display:
         hint = self.font.render("Press S or ESC to return home", True, (30, 80, 40))
         self.screen.blit(hint, (20, HEIGHT - 30))
 
-        # Show explicit play sprite if available
+        # Show explicit play sprite
         try:
             play_sprite = load_image("base_pet_play.png")
             rect = play_sprite.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
@@ -212,8 +214,8 @@ class Display:
             surf.fill((255, 0, 255))
             return surf
 
-        mood_name = self.pet.mood.value           # happy, lonely, etc.
-        accessory_name = self.pet.accessory.value # none, bow, sun_hat, ...
+        mood_name = self.pet.mood.value           # e.g. "sleepy"
+        accessory_name = self.pet.accessory.value # e.g. "bow", "none"
 
         cache_key = f"{accessory_name}_{mood_name}"
         if cache_key in self.sprite_cache:
