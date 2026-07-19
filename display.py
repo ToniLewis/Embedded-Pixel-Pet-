@@ -119,7 +119,6 @@ class Display:
             rect = sprite.get_rect(center=(center_x, center_y))
             self.screen.blit(sprite, rect.topleft)
         else:
-            # Fallback circle if sprite missing
             pygame.draw.circle(self.screen, (255, 255, 255), (center_x, center_y), 32)
             pygame.draw.circle(self.screen, (150, 120, 200), (center_x, center_y), 32, 2)
 
